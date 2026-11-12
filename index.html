@@ -4,13 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#1e40af">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>GPS Leitura — Medidores v2</title>
+<title>GPS Leitura — Medidores v3</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<link rel="manifest" href='data:application/manifest+json,{"name":"GPS Leitura Medidores","short_name":"GPS Leitura","start_url":".","display":"standalone","background_color":"%230f172a","theme_color":"%231e40af","icons":[{"src":"data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Crect width=%27100%27 height=%27100%27 fill=%27%231e40af%27 rx=%2720%27/%3E%3Ctext x=%2750%27 y=%2765%27 font-size=%2750%27 text-anchor=%27middle%27 fill=%27white%27%3E%E2%9A%A1%3C/text%3E%3C/svg%3E","sizes":"512x512","type":"image/svg+xml"}]}'>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
   body { background: #0f172a; color: #e2e8f0; padding: 10px; min-height: 100vh; }
@@ -38,6 +35,7 @@
   .row > * { flex: 1; }
   small { color: #64748b; font-size: 11px; display: block; margin-bottom: 6px; }
   .hidden { display: none; }
+  
   /* Dashboard */
   .dash { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
   .dash .item { background: #0f172a; border-radius: 10px; padding: 10px 6px; text-align: center; }
@@ -48,6 +46,7 @@
   .dash .prec .n { color: #60a5fa; }
   .progress { height: 8px; background: #0f172a; border-radius: 8px; overflow: hidden; margin-top: 6px; }
   .progress > div { height: 100%; background: linear-gradient(90deg, #16a34a, #4ade80); transition: .3s; }
+
   /* Lista UCs */
   .uc-item { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 10px; margin-bottom: 6px; font-size: 13px; cursor: pointer; transition: .15s; }
   .uc-item:active { background: #1e293b; }
@@ -57,21 +56,23 @@
   .badge.valid { background: #14532d; color: #86efac; }
   .badge.pendente { background: #78350f; color: #fcd34d; }
   .badge.fora { background: #7f1d1d; color: #fca5a5; }
+  
   /* Mapa */
   #mapa { height: 280px; border-radius: 10px; margin-bottom: 8px; z-index: 1; }
+  
   /* Foto */
   .foto-preview { width: 100%; max-height: 200px; object-fit: cover; border-radius: 10px; margin-bottom: 8px; }
   .foto-btn { position: relative; overflow: hidden; }
   .foto-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-  /* Busca */
-  .busca { margin-bottom: 8px; }
+  
   /* Modal detalhe */
   .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.8); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 16px; }
   .modal { background: #1e293b; border-radius: 16px; padding: 18px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; }
   .modal h3 { color: #60a5fa; margin-bottom: 12px; }
   .modal .foto-preview { max-height: 250px; }
-  .modal .kv { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #334155; font-size: 13px; }
-  .modal .kv span:first-child { color: #94a3b8; }
+  .modal .kv { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #334155; font-size: 13px; gap: 10px;}
+  .modal .kv span:first-child { color: #94a3b8; white-space: nowrap; }
+  .modal .kv span:last-child { text-align: right; }
   .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
   .tabs button { background: #0f172a; margin: 0; padding: 8px; font-size: 12px; }
   .tabs button.active { background: #1e40af; }
@@ -81,7 +82,7 @@
 <div class="app">
   <header>
     <div>
-      <h1>⚡ GPS Leitura v2</h1>
+      <h1>⚡ GPS Leitura v3</h1>
       <p>Validação de coordenadas — UCs</p>
     </div>
     <span class="badge-online" id="online">● ON</span>
@@ -107,7 +108,7 @@
   <!-- IMPORTAR -->
   <div class="card">
     <h2>📥 Importar base SAP</h2>
-    <small>Colunas: Instalação/UC, Endereço, Bairro, Cidade (+ Latitude/Longitude se já tiver histórico).</small>
+    <small>Colunas esperadas: Instalação, Nº de série, Nome, Rua, Latitude e Longitude (Retorno).</small>
     <input type="file" id="arquivo" accept=".xlsx,.xls,.csv">
     <div class="row">
       <button class="sec small" onclick="limparBase()">🗑 Limpar base</button>
@@ -154,7 +155,7 @@
   <!-- LISTA -->
   <div class="card hidden" id="cardLista">
     <h2>📋 Unidades (<span id="contador">0</span>)</h2>
-    <input class="busca" id="busca" placeholder="🔍 Buscar UC, endereço, bairro..." oninput="renderLista()">
+    <input class="busca" id="busca" placeholder="🔍 Buscar por UC, Nº de série ou endereço..." oninput="renderLista()">
     <div id="listaUC"></div>
   </div>
 
@@ -175,20 +176,19 @@ let base = [];
 let indiceAtual = 0;
 let gpsCapturado = null;
 let fotoTemp = null;
-let ultimaUCReferencia = null;
 let mapa = null;
 let camadaMarcadores = null;
 
 // ==================== PERSISTÊNCIA ====================
 function carregar() {
-  const raw = localStorage.getItem('baseUC_v2');
+  const raw = localStorage.getItem('baseUC_v3');
   if (raw) base = JSON.parse(raw);
   document.getElementById('leitor').value = localStorage.getItem('leitor') || '';
   atualizarOnline();
   render();
 }
 
-function salvar() { localStorage.setItem('baseUC_v2', JSON.stringify(base)); }
+function salvar() { localStorage.setItem('baseUC_v3', JSON.stringify(base)); }
 
 document.getElementById('leitor').addEventListener('input', e => localStorage.setItem('leitor', e.target.value));
 
@@ -209,32 +209,43 @@ document.getElementById('arquivo').addEventListener('change', async (e) => {
   const ws = wb.Sheets[wb.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
 
-  const get = (row, ...keys) => {
+  // Função robusta para achar colunas ignorando acentos e maiúsculas
+  const getCol = (row, ...keys) => {
     for (const k of keys) {
-      const found = Object.keys(row).find(c => c.toLowerCase().includes(k.toLowerCase()));
+      const found = Object.keys(row).find(c => c.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")));
       if (found && row[found] !== '') return String(row[found]).trim();
     }
     return '';
   };
 
-  base = rows.map(row => ({
-    uc: get(row, 'instala', 'uc', 'unidade', 'contrato'),
-    endereco: get(row, 'endere', 'logradouro', 'rua'),
-    bairro: get(row, 'bairro'),
-    cidade: get(row, 'cidade', 'municipio'),
-    lat: get(row, 'lat'),
-    lng: get(row, 'long', 'lng'),
-    precisao: get(row, 'precis'),
-    data: get(row, 'data'),
-    leitor: get(row, 'leitor'),
-    status: get(row, 'status') || (get(row, 'lat') ? 'validada' : 'pendente'),
-    foto: '',
-    fotoAnterior: get(row, 'foto') || ''
-  })).filter(r => r.uc);
+  base = rows.map(row => {
+    // Pega o nome e sobrenome e junta
+    const nome1 = getCol(row, '1º nome', 'nome');
+    const nome2 = getCol(row, 'sobrenome');
+    const cliente = `${nome1} ${nome2}`.trim();
+
+    return {
+      uc: getCol(row, 'instalacao', 'instalação', 'uc', 'unidade', 'contrato'),
+      serie: getCol(row, 'serie', 'série', 'medidor', 'equipamento'),
+      regional: getCol(row, 'regional', 'localidade'),
+      cliente: cliente || 'Não informado',
+      endereco: getCol(row, 'rua', 'endereço', 'logradouro'),
+      numero: getCol(row, 'numero', 'número'),
+      bairro: getCol(row, 'bairro', 'descricao da localidade'),
+      // Coordenadas que JÁ VÊM no excel do SAP
+      lat: getCol(row, 'valor latitude - retorno', 'latitude', 'lat'),
+      lng: getCol(row, 'valor longitude - retorno', 'longitude', 'lng'),
+      precisao: getCol(row, 'precisao', 'precisão'),
+      data: getCol(row, 'data'),
+      leitor: getCol(row, 'leitor'),
+      status: getCol(row, 'status') || (getCol(row, 'valor latitude - retorno') ? 'validada' : 'pendente'),
+      foto: ''
+    };
+  }).filter(r => r.uc); // Só aceita se tiver o número da UC
 
   indiceAtual = 0;
   salvar(); render();
-  alert(`${base.length} UCs importadas!`);
+  alert(`${base.length} UCs importadas com sucesso!`);
 });
 
 function importarHistorico() {
@@ -255,7 +266,6 @@ function importarHistorico() {
       if (!uc) return;
       const idx = base.findIndex(b => b.uc === uc);
       if (idx !== -1 && row['Latitude'] && row['Longitude']) {
-        // Guarda a coordenada anterior como referência (não sobrescreve)
         if (!base[idx].latAnterior) {
           base[idx].latAnterior = String(row['Latitude']);
           base[idx].lngAnterior = String(row['Longitude']);
@@ -264,7 +274,7 @@ function importarHistorico() {
       }
     });
     salvar(); render();
-    alert(`Histórico mesclado em ${mescladas} UCs (referência para validação de raio).`);
+    alert(`Histórico mesclado em ${mescladas} UCs.`);
   };
   input.click();
 }
@@ -313,7 +323,7 @@ function render() {
     indiceAtual = idx;
     document.getElementById('ucAtual').className = 'status info';
     document.getElementById('ucAtual').innerHTML =
-      `<b>UC ${uc.uc}</b><br>${uc.endereco || '-'} ${uc.bairro ? '· '+uc.bairro : ''} ${uc.cidade ? '· '+uc.cidade : ''}`;
+      `<b>UC ${uc.uc} / Medidor ${uc.serie}</b><br>${uc.cliente}<br>${uc.endereco}, ${uc.numero} - ${uc.bairro}`;
     verificarRaio(uc);
   }
 
@@ -324,11 +334,12 @@ function render() {
 // ==================== VALIDAÇÃO DE RAIO ====================
 function verificarRaio(uc) {
   const el = document.getElementById('alertaRaio');
-  if (!uc.latAnterior || !uc.lngAnterior) { el.className = 'hidden'; return; }
+  // Verifica se tem coordenadas que vieram do SAP
+  if (!uc.lat || !uc.lng) { el.className = 'hidden'; return; }
   el.className = 'status info';
-  el.innerHTML = `📍 Esta UC já teve coordenada registrada anteriormente:<br>
-    <b>${uc.latAnterior}, ${uc.lngAnterior}</b><br>
-    <small>Após capturar o GPS, o app comparará a distância.</small>`;
+  el.innerHTML = `📍 <b>GPS Registrado no SAP:</b><br>
+    Lat: ${uc.lat} | Long: ${uc.lng}<br>
+    <small>O app avisará se a nova captura for muito longe deste ponto.</small>`;
 }
 
 function distanciaMetros(lat1, lng1, lat2, lng2) {
@@ -363,12 +374,12 @@ function capturarGPS() {
       let html = `✅ ${latitude.toFixed(6)}, ${longitude.toFixed(6)}<br>
         Precisão: <b>±${Math.round(accuracy)}m</b> ${precisa ? '(ok)' : '(⚠ fraca)'}`;
 
-      // Validação de raio
+      // Validação de raio usando as coordenadas do SAP
       const uc = base[indiceAtual];
-      if (uc && uc.latAnterior && uc.lngAnterior) {
-        const dist = distanciaMetros(latitude, longitude, parseFloat(uc.latAnterior), parseFloat(uc.lngAnterior));
-        const fora = dist > 30;
-        html += `<br>${fora ? '⚠' : '✅'} Distância da coordenada anterior: <b>${dist.toFixed(1)}m</b> ${fora ? '(FORA DO RAIO — verifique!)' : '(dentro do raio ok)'}`;
+      if (uc && uc.lat && uc.lng) {
+        const dist = distanciaMetros(latitude, longitude, parseFloat(uc.lat), parseFloat(uc.lng));
+        const fora = dist > 30; // Limite de 30 metros
+        html += `<br>${fora ? '⚠' : '✅'} Distância do GPS do SAP: <b>${dist.toFixed(1)}m</b> ${fora ? '(FORA DO RAIO!)' : '(ok)'}`;
         if (fora) status.className = 'status bad';
       }
       status.innerHTML = html;
@@ -387,7 +398,6 @@ function processarFoto(e) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = (ev) => {
-    // Redimensiona para economizar espaço no localStorage
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
@@ -423,21 +433,24 @@ function salvarCoordenada() {
 
   const uc = base[indiceAtual];
 
-  // Verifica raio novamente
   let status = 'validada';
-  if (uc.latAnterior && uc.lngAnterior) {
+  if (uc.lat && uc.lng) {
     const dist = distanciaMetros(
       parseFloat(gpsCapturado.lat), parseFloat(gpsCapturado.lng),
-      parseFloat(uc.latAnterior), parseFloat(uc.lngAnterior)
+      parseFloat(uc.lat), parseFloat(uc.lng)
     );
     if (dist > 30) {
-      if (!confirm(`⚠ Coordenada está ${dist.toFixed(1)}m da anterior (fora do raio de 30m).\n\nSalvar mesmo assim como "fora do raio"?`)) return;
+      if (!confirm(`⚠ A coordenada nova está a ${dist.toFixed(1)}m do GPS que veio no SAP.\n\nSalvar mesmo assim como "fora do raio"?`)) return;
       status = 'fora';
     }
   }
 
   base[indiceAtual] = {
     ...uc,
+    // Cria um "histórico" da coordenada antiga para não perder a referência
+    latAnterior: uc.lat, 
+    lngAnterior: uc.lng,
+    // Salva a nova
     lat: gpsCapturado.lat,
     lng: gpsCapturado.lng,
     precisao: gpsCapturado.precisao,
@@ -473,14 +486,19 @@ function renderLista() {
   lista.innerHTML = '';
 
   base.forEach((uc, i) => {
-    if (busca && !`${uc.uc} ${uc.endereco} ${uc.bairro}`.toLowerCase().includes(busca)) return;
+    // Busca inteligente (aceita UC, nome, rua, série)
+    const textoBusca = `${uc.uc} ${uc.serie} ${uc.cliente} ${uc.endereco} ${uc.bairro}`.toLowerCase();
+    if (busca && !textoBusca.includes(busca)) return;
+    
     const div = document.createElement('div');
     div.className = 'uc-item';
     const cls = uc.status === 'validada' ? 'valid' : uc.status === 'fora' ? 'fora' : 'pendente';
     const lbl = uc.status === 'validada' ? '✔ validada' : uc.status === 'fora' ? '⚠ fora' : '⏳ pendente';
     div.innerHTML = `<span class="badge ${cls}">${lbl}</span>
-      <b>${uc.uc}</b><br>${uc.endereco || '-'} · ${uc.bairro || ''}<br>
-      <span class="coord">${uc.lat ? `📍 ${uc.lat}, ${uc.lng} (±${uc.precisao}m) — ${uc.data}` : 'sem coordenada'}</span>`;
+      <b>${uc.uc}</b> - Medidor ${uc.serie}<br>
+      ${uc.cliente}<br>
+      ${uc.endereco}, ${uc.numero}<br>
+      <span class="coord">${uc.lat ? `📍 ${uc.lat}, ${uc.lng} (±${uc.precisao||0}m) — ${uc.data||''}` : 'sem coordenada'}</span>`;
     div.onclick = () => abrirDetalhe(i);
     lista.appendChild(div);
   });
@@ -491,19 +509,30 @@ function abrirDetalhe(i) {
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
   bg.onclick = (e) => { if (e.target === bg) bg.remove(); };
+  
+  // Monta o HTML do modal
   bg.innerHTML = `<div class="modal">
     <h3>UC ${uc.uc}</h3>
     ${uc.foto ? `<img class="foto-preview" src="${uc.foto}">` : ''}
-    <div class="kv"><span>Endereço</span><span>${uc.endereco || '-'}</span></div>
+    
+    <div class="kv"><span>Regional</span><span>${uc.regional || '-'}</span></div>
+    <div class="kv"><span>Cliente</span><span>${uc.cliente || '-'}</span></div>
+    <div class="kv"><span>Endereço</span><span>${uc.endereco || '-'}, ${uc.numero || 'S/N'}</span></div>
     <div class="kv"><span>Bairro</span><span>${uc.bairro || '-'}</span></div>
-    <div class="kv"><span>Cidade</span><span>${uc.cidade || '-'}</span></div>
-    <div class="kv"><span>Latitude</span><span>${uc.lat || '-'}</span></div>
-    <div class="kv"><span>Longitude</span><span>${uc.lng || '-'}</span></div>
-    <div class="kv"><span>Precisão</span><span>${uc.precisao ? '±'+uc.precisao+'m' : '-'}</span></div>
-    <div class="kv"><span>Data</span><span>${uc.data || '-'}</span></div>
+    <div class="kv"><span>Nº de Série</span><span>${uc.serie || '-'}</span></div>
+    
+    <div class="kv" style="background:#14532d; padding:8px; border-radius:6px; margin-top:8px">
+      <span>Latitude (Atual)</span><span><b>${uc.lat || '-'}</b></span>
+    </div>
+    <div class="kv" style="background:#14532d; padding:8px; border-radius:6px;">
+      <span>Longitude (Atual)</span><span><b>${uc.lng || '-'}</b></span>
+    </div>
+
+    <div class="kv"><span>Precisão GPS</span><span>${uc.precisao ? '±'+uc.precisao+'m' : '-'}</span></div>
+    <div class="kv"><span>Data/Hora Captura</span><span>${uc.data || '-'}</span></div>
     <div class="kv"><span>Leitor</span><span>${uc.leitor || '-'}</span></div>
     <div class="kv"><span>Status</span><span>${uc.status}</span></div>
-    ${uc.latAnterior ? `<div class="kv"><span>Coord. anterior</span><span>${uc.latAnterior}, ${uc.lngAnterior}</span></div>` : ''}
+    
     ${uc.lat ? `<button class="sec" style="margin-top:10px" onclick="window.open('https://www.google.com/maps?q=${uc.lat},${uc.lng}','_blank')">🗺 Abrir no Google Maps</button>` : ''}
     <button class="warn" style="margin-top:6px" onclick="this.closest('.modal-bg').remove()">Fechar</button>
   </div>`;
@@ -522,7 +551,8 @@ function mudarTab(tab) {
 
 function initMapa() {
   if (mapa) { renderMapa(); return; }
-  mapa = L.map('mapa').setView([-15.78, -47.93], 12);
+  // Centraliza o mapa em Santa Catarina como padrão
+  mapa = L.map('mapa').setView([-27.01, -48.63], 14); 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap', maxZoom: 19
   }).addTo(mapa);
@@ -534,15 +564,17 @@ function renderMapa() {
   if (camadaMarcadores) mapa.removeLayer(camadaMarcadores);
   camadaMarcadores = L.layerGroup().addTo(mapa);
   const pontos = [];
+  
   base.forEach(uc => {
     if (!uc.lat || !uc.lng) return;
     const cor = uc.status === 'validada' ? '#16a34a' : uc.status === 'fora' ? '#dc2626' : '#f59e0b';
     const marker = L.circleMarker([parseFloat(uc.lat), parseFloat(uc.lng)], {
       radius: 7, color: '#fff', weight: 2, fillColor: cor, fillOpacity: 1
-    }).bindPopup(`<b>UC ${uc.uc}</b><br>${uc.endereco || ''}<br>${uc.lat}, ${uc.lng}<br>±${uc.precisao}m`);
+    }).bindPopup(`<b>UC ${uc.uc}</b><br>${uc.cliente}<br>${uc.endereco}, ${uc.numero}<br>Lat: ${uc.lat}<br>Lng: ${uc.lng}<br>Status: ${uc.status}`);
     camadaMarcadores.addLayer(marker);
     pontos.push([parseFloat(uc.lat), parseFloat(uc.lng)]);
   });
+  
   if (pontos.length) mapa.fitBounds(pontos, { padding: [30, 30] });
 }
 
@@ -551,9 +583,12 @@ function prepararLinhas(filtro = null) {
   const src = filtro ? base.filter(filtro) : base;
   return src.map(u => ({
     'UC/Instalação': u.uc,
+    'Nº de série': u.serie,
+    'Regional': u.regional,
+    'Cliente': u.cliente,
     'Endereço': u.endereco,
+    'Número': u.numero,
     'Bairro': u.bairro,
-    'Cidade': u.cidade,
     'Latitude': u.lat,
     'Longitude': u.lng,
     'Precisão (m)': u.precisao,
