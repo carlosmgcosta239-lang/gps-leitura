@@ -20,7 +20,8 @@
     --border: #e2e8f0;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
-  body { background: var(--bg); color: var(--text); padding-bottom: 70px; }
+  /* Correção do rodapé para o Netlify não sobrepor */
+  body { background: var(--bg); color: var(--text); padding-bottom: 120px; }
   
   /* Header */
   header { padding: 16px; display: flex; justify-content: space-between; align-items: center; background: var(--bg); position: sticky; top: 0; z-index: 10; }
@@ -39,6 +40,7 @@
   .search-bar { display: flex; gap: 8px; margin-bottom: 16px; }
   .search-input { flex: 1; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); font-size: 14px; outline: none; transition: border 0.2s; }
   .search-input:focus { border-color: var(--primary); }
+  .btn-search { width: 46px; height: 46px; border-radius: 12px; background: var(--primary); color: white; border: none; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(21,94,239,0.3); }
   .btn-voice { width: 46px; height: 46px; border-radius: 12px; background: var(--primary); color: white; border: none; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(21,94,239,0.3); }
   .btn-voice.listening { animation: pulse 1.5s infinite; background: var(--red); box-shadow: 0 4px 10px rgba(220,38,38,0.3); }
   @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
@@ -62,7 +64,7 @@
   .progress-fill { height: 100%; background: var(--green); transition: width 0.5s; }
   
   /* Mapa */
-  #map { height: 300px; border-radius: 12px; z-index: 1; margin-bottom: 12px; }
+  #map { height: 350px; border-radius: 12px; z-index: 1; margin-bottom: 12px; }
   
   /* Aba Base */
   .base-file { display: flex; align-items: center; gap: 12px; padding: 12px; background: #f8fafc; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 16px; }
@@ -75,8 +77,8 @@
   .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
   .btn-danger { background: #fee2e2; color: var(--red); }
 
-  /* Menu Inferior */
-  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 20px 0; z-index: 999; }
+  /* Menu Inferior Corrigido */
+  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding-top: 10px; padding-bottom: 60px; z-index: 999; }
   .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-light); font-size: 11px; font-weight: 600; text-decoration: none; }
   .nav-item.active { color: var(--primary); }
   .nav-icon { font-size: 20px; }
@@ -88,7 +90,7 @@
   .badge-gray { background: #f1f5f9; color: var(--text-light); padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
   
   /* Painel do Ponto */
-  .point-panel { background: var(--card); border-radius: 16px 16px 0 0; padding: 16px; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); }
+  .point-panel { background: var(--card); border-radius: 16px 16px 0 0; padding: 16px; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); border: 1px solid var(--border); border-bottom: none; }
   .point-panel h3 { font-size: 14px; display: flex; justify-content: space-between; }
   .point-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
   .point-grid .item { font-size: 13px; }
@@ -104,7 +106,7 @@
     <div class="logo-icon">⚡</div>
     <div class="logo-text">
       <h1>LEITURA EM CAMPO</h1>
-      <p id="user-info">Supervisor - Carregando...</p>
+      <p id="user-info">Operação - Carregando...</p>
     </div>
   </div>
   <div class="avatar">OP</div>
@@ -118,7 +120,8 @@
   </div>
 
   <div class="search-bar">
-    <input type="text" id="search-input" class="search-input" placeholder="Buscar UC, medidor, nome..." oninput="filtrarDados()">
+    <input type="text" id="search-input" class="search-input" placeholder="Buscar UC, medidor, nome..." onkeypress="if(event.key === 'Enter') filtrarDados()">
+    <button class="btn-search" onclick="filtrarDados()">🔍</button>
     <button class="btn-voice" id="btn-mic" onclick="toggleVoz()">🎤</button>
   </div>
 
@@ -159,7 +162,8 @@
 <!-- TELA 2: MAPA -->
 <div id="screen-mapa" class="screen">
   <div class="search-bar">
-    <input type="text" id="search-map" class="search-input" placeholder="Buscar ponto no mapa..." oninput="filtrarDados()">
+    <input type="text" id="search-map" class="search-input" placeholder="Buscar ponto no mapa..." onkeypress="if(event.key === 'Enter') filtrarDados()">
+    <button class="btn-search" onclick="filtrarDados()">🔍</button>
     <button class="btn-voice" onclick="toggleVoz()">🎤</button>
   </div>
   
@@ -210,16 +214,10 @@
   </div>
 
   <button class="btn btn-danger" onclick="limparBase()" style="margin-top: 16px;">🗑 Limpar base</button>
-  <p style="text-align: center; font-size: 11px; color: var(--text-light); margin-top: 8px;">A base poderá ser importada novamente depois.</p>
 </div>
 
 <!-- MENU INFERIOR -->
-<style>
-  .bottom-nav { padding-bottom: 50px !important; }
-  body { padding-bottom: 100px !important; }
-</style>
-  
-  <nav class="bottom-nav">
+<nav class="bottom-nav">
   <a href="#" class="nav-item active" onclick="mudarTela('home', this)">
     <span class="nav-icon">🏠</span>
     Início
@@ -247,7 +245,7 @@ let reconhecimentoVoz = null;
 document.addEventListener('DOMContentLoaded', () => {
   carregarDoLocalStorage();
   
-  // Configurar Voz (Web Speech API)
+  // Configurar Voz
   if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     reconhecimentoVoz = new SpeechRecognition();
@@ -256,10 +254,22 @@ document.addEventListener('DOMContentLoaded', () => {
     reconhecimentoVoz.interimResults = false;
     
     reconhecimentoVoz.onresult = (event) => {
-      const texto = event.results[0][0].transcript;
+      let texto = event.results[0][0].transcript;
+      
+      // CORREÇÃO 1: Limpar números que a voz adiciona hífen (ex: 480655-03 vira 48065503)
+      texto = texto.replace(/-/g, '');
+
       document.getElementById('search-input').value = texto;
       document.getElementById('search-map').value = texto;
+      
       filtrarDados();
+      
+      // CORREÇÃO 2: Se buscou por voz, muda para a aba do mapa automaticamente
+      if (texto.length > 0) {
+        const navMapa = document.querySelectorAll('.nav-item')[1];
+        mudarTela('mapa', navMapa);
+      }
+
       document.getElementById('btn-mic').classList.remove('listening');
     };
     
@@ -284,12 +294,14 @@ function mudarTela(tela, el) {
 
   if (tela === 'mapa' && !mapa) {
     setTimeout(initMapa, 100);
+  } else if (tela === 'mapa' && mapa) {
+    setTimeout(() => mapa.invalidateSize(), 100);
   }
 }
 
 // ==================== LÓGICA DE DADOS ====================
 function carregarDoLocalStorage() {
-  const saved = localStorage.getItem('baseLeituraApp_v4');
+  const saved = localStorage.getItem('baseLeituraApp_v5');
   if (saved) {
     baseDados = JSON.parse(saved);
     filtrarDados();
@@ -298,9 +310,9 @@ function carregarDoLocalStorage() {
 
 function salvarNoLocalStorage() {
   try {
-    localStorage.setItem('baseLeituraApp_v4', JSON.stringify(baseDados));
+    localStorage.setItem('baseLeituraApp_v5', JSON.stringify(baseDados));
   } catch (e) {
-    alert('Aviso: A base é muito grande para ser salva localmente. Os dados funcionarão, mas ao fechar o app você precisará importar novamente.');
+    console.warn('Armazenamento cheio, mas os dados estão na memória.');
   }
 }
 
@@ -315,12 +327,11 @@ function importarExcel(event) {
     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
 
-    // Mapeamento robusto baseado na nova planilha
     baseDados = rows.map(row => {
       const get = (keys) => {
         for (const k of keys) {
           const found = Object.keys(row).find(c => c.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(k.toLowerCase()));
-          if (found && row[found] !== '') return row[found];
+          if (found && row[found] !== '') return String(row[found]).trim();
         }
         return '';
       };
@@ -329,9 +340,8 @@ function importarExcel(event) {
       const nome2 = get(['sobrenome']);
       const nomeCompleto = `${nome1} ${nome2}`.trim();
 
-      // Verifica se a coordenada é válida (não é zero e não está vazia)
-      const latStr = String(get(['valor latitude - retorno', 'latitude', 'lat'])).replace(',', '.');
-      const lngStr = String(get(['valor longitude - retorno', 'longitude', 'lng'])).replace(',', '.');
+      const latStr = get(['valor latitude - retorno', 'latitude', 'lat']).replace(',', '.');
+      const lngStr = get(['valor longitude - retorno', 'longitude', 'lng']).replace(',', '.');
 
       const lat = parseFloat(latStr);
       const lng = parseFloat(lngStr);
@@ -352,43 +362,55 @@ function importarExcel(event) {
         temGps: temGps,
         status: get(['status leitura', 'descrição nota de leitura']) || 'Pendente'
       };
-    }).filter(r => r.uc); // Só mantém se tiver UC
+    }).filter(r => r.uc);
 
     salvarNoLocalStorage();
     filtrarDados();
+    
+    // Limpa os campos de busca após importar
+    document.getElementById('search-input').value = '';
+    document.getElementById('search-map').value = '';
+    
     alert(`${baseDados.length} registros importados com sucesso!`);
   };
   reader.readAsArrayBuffer(file);
 }
 
 function filtrarDados() {
+  // Pega o que foi digitado nas duas barras e converte para minúsculo
   const termoHome = document.getElementById('search-input').value.toLowerCase();
   const termoMap = document.getElementById('search-map').value.toLowerCase();
   const termo = termoHome || termoMap;
 
   if (termo) {
-    dadosFiltrados = baseDados.filter(r => 
-      r.nome.toLowerCase().includes(termo) || 
-      r.uc.includes(termo) || 
-      r.medidor.includes(termo) || 
-      r.rua.toLowerCase().includes(termo)
-    );
+    // Remove hifens e espaços do termo de busca para facilitar achar números
+    const termoLimpo = termo.replace(/[-\s]/g, '');
+
+    dadosFiltrados = baseDados.filter(r => {
+      const ucLimpa = r.uc.replace(/[-\s]/g, '');
+      const medidorLimpo = r.medidor.replace(/[-\s]/g, '');
+      
+      return r.nome.toLowerCase().includes(termo) || 
+             ucLimpa.includes(termoLimpo) || 
+             medidorLimpo.includes(termoLimpo) || 
+             r.rua.toLowerCase().includes(termo) ||
+             r.regional.toLowerCase().includes(termo) || 
+             r.etapa.toLowerCase().includes(termo);
+    });
   } else {
     dadosFiltrados = [...baseDados];
   }
 
-  atualizarDashboard();
-  atualizarMapa();
+  atualizarDashboard(termo);
+  atualizarMapa(termo);
 }
 
 // ==================== DASHBOARD ====================
-function atualizarDashboard() {
-  const total = baseDados.length;
-  
-  // Considera concluído se a nota de leitura for algo normal ou se o status for diferente de vazio
-  const concluidas = baseDados.filter(r => r.status && !r.status.includes('Pendente')).length;
+function atualizarDashboard(termo = '') {
+  const total = dadosFiltrados.length;
+  const concluidas = dadosFiltrados.filter(r => r.status && !r.status.includes('Pendente') && r.status !== '000').length;
   const pendentes = total - concluidas;
-  const gpsZerado = baseDados.filter(r => !r.temGps).length;
+  const gpsZerado = dadosFiltrados.filter(r => !r.temGps).length;
 
   document.getElementById('stat-total').innerText = total;
   document.getElementById('stat-concluidas').innerText = concluidas;
@@ -400,10 +422,14 @@ function atualizarDashboard() {
   document.getElementById('prog-concluidas').innerText = `${concluidas} concluídas`;
   document.getElementById('prog-restantes').innerText = `${pendentes} restantes`;
 
-  document.getElementById('base-registros').innerText = `${total} registros carregados`;
-  document.getElementById('user-info').innerText = `Operação - ${baseDados[0]?.regional || 'Sem Regional'}`;
+  document.getElementById('base-registros').innerText = `${baseDados.length} registros na base`;
+  
+  if (termo) {
+    document.getElementById('filtro-atual').innerText = `Filtrando por: "${termo}"`;
+  } else {
+    document.getElementById('filtro-atual').innerText = baseDados.length > 0 ? `Operação - ${baseDados[0]?.regional || 'Geral'}` : 'Nenhuma base carregada';
+  }
 
-  // Alerta de GPS Zero
   if (gpsZerado > 0) {
     document.getElementById('alerta-gps').style.display = 'block';
     document.getElementById('qtd-gps-zero').innerText = gpsZerado;
@@ -422,23 +448,20 @@ function initMapa() {
   atualizarMapa();
 }
 
-function atualizarMapa() {
+function atualizarMapa(termo = '') {
   if (!mapa) return;
   camadaMarcadores.clearLayers();
   
   const pontosValidos = [];
+  let pontoFocado = null;
 
   dadosFiltrados.forEach(item => {
-    if (!item.temGps) return; // Pula quem não tem GPS
+    if (!item.temGps) return;
 
-    const cor = item.status.includes('Pendente') ? '#dc2626' : '#16a34a';
+    const cor = (item.status && !item.status.includes('Pendente') && item.status !== '000') ? '#16a34a' : '#dc2626';
     
     const marker = L.circleMarker([item.lat, item.lng], {
-      radius: 8,
-      color: '#fff',
-      weight: 2,
-      fillColor: cor,
-      fillOpacity: 1
+      radius: 8, color: '#fff', weight: 2, fillColor: cor, fillOpacity: 1
     });
 
     marker.on('click', () => {
@@ -447,25 +470,37 @@ function atualizarMapa() {
 
     camadaMarcadores.addLayer(marker);
     pontosValidos.push([item.lat, item.lng]);
+    
+    // Se for uma busca ativa e tiver só 1 resultado, foca nele
+    if (termo && dadosFiltrados.length === 1) {
+      pontoFocado = [item.lat, item.lng];
+      exibirDetalhesPonto(item, marker);
+    }
   });
 
-  if (pontosValidos.length > 0 && !marcadorSelecionado) {
+  if (pontoFocado) {
+    mapa.setView(pontoFocado, 17);
+  } else if (pontosValidos.length > 0 && !termo) {
     mapa.fitBounds(pontosValidos, { padding: [30, 30] });
   }
 }
 
 function exibirDetalhesPonto(item, marker) {
-  // Destaca o marcador
   if (marcadorSelecionado) {
-    marcadorSelecionado.setStyle({ fillColor: marcadorSelecionado.options.originalColor, radius: 8 });
+    const corAntiga = (marcadorSelecionado.item.status && !marcadorSelecionado.item.status.includes('Pendente') && marcadorSelecionado.item.status !== '000') ? '#16a34a' : '#dc2626';
+    marcadorSelecionado.setStyle({ fillColor: corAntiga, radius: 8 });
   }
-  marker.options.originalColor = marker.options.fillColor;
-  marker.setStyle({ fillColor: '#155eef', radius: 12 }); // Azul selecionado
+  
+  marker.item = item; // Salva referência
+  marker.setStyle({ fillColor: '#155eef', radius: 12 });
   marcadorSelecionado = marker;
 
-  // Preenche o painel
   document.getElementById('point-details').classList.remove('hidden');
-  document.getElementById('pd-title').innerHTML = `Ponto Selecionado · Etapa ${item.etapa} <span class="${item.status.includes('Pendente') ? 'badge-red' : 'badge-green'}">${item.status}</span>`;
+  
+  const isConcluida = (item.status && !item.status.includes('Pendente') && item.status !== '000');
+  const badgeClass = isConcluida ? 'badge-green' : 'badge-red';
+  
+  document.getElementById('pd-title').innerHTML = `Ponto Selecionado · Etapa ${item.etapa} <span class="${badgeClass}">${item.status}</span>`;
   document.getElementById('pd-nome').innerText = item.nome;
   document.getElementById('pd-uc').innerText = item.uc;
   document.getElementById('pd-medidor').innerText = item.medidor;
@@ -501,10 +536,10 @@ function exportarExcel() {
 }
 
 function limparBase() {
-  if (confirm('Tem certeza que deseja apagar todos os dados do aplicativo? Você precisará importar a planilha novamente.')) {
+  if (confirm('Tem certeza que deseja apagar todos os dados do aplicativo?')) {
     baseDados = [];
     dadosFiltrados = [];
-    localStorage.removeItem('baseLeituraApp_v4');
+    localStorage.removeItem('baseLeituraApp_v5');
     filtrarDados();
     document.getElementById('search-input').value = '';
     document.getElementById('search-map').value = '';
