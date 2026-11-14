@@ -29,7 +29,7 @@
   .logo-text h1 { font-size: 16px; font-weight: 700; }
   .logo-text p { font-size: 12px; color: var(--text-light); }
   
-  /* Logo Afernandes */
+  /* Logo Afernandes em SVG leve (evita quebrar o GitHub) */
   .logo-afernandes { height: 40px; max-width: 120px; object-fit: contain; }
 
   /* Telas */
@@ -125,8 +125,7 @@
       <p id="user-info">Operação - Carregando...</p>
     </div>
   </div>
-  <!-- Logo Afernandes apontando para o arquivo que você subiu -->
-  <img src="logo.png" alt="Afernandes" class="logo-afernandes">
+  <img src="logo.png" alt="Afernandes" class="logo-afernandes" onerror="this.style.display='none'">
 </header>
 
 <div id="screen-home" class="screen active">
@@ -570,11 +569,4 @@ function exibirDetalhesPonto(item, marker) {
   const badgeClass = isConcluida ? 'badge-green' : 'badge-red';
   
   document.getElementById('pd-title').innerHTML = `Ponto Selecionado · Etapa ${item.etapa} <span class="${badgeClass}">${item.status}</span>`;
-  document.getElementById('pd-nome').innerText = item.nome;
-  document.getElementById('pd-uc').innerText = item.uc;
-  document.getElementById('pd-medidor').innerText = item.medidor;
-  document.getElementById('pd-endereco').innerText = `${item.rua}, ${item.numero}`;
-  document.getElementById('pd-leiturista').innerText = item.leiturista || 'Não informado';
-
-  document.getElementById('route-actions').style.display = 'grid';
-  document.getElementById('link-gmaps').href = `https://www.google.com/maps/dir/?api=
+  document.getElementById('pd-nome
