@@ -22,22 +22,17 @@
   * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
   body { background: var(--bg); color: var(--text); padding-bottom: 120px; }
   
-  /* Header */
   header { padding: 16px; display: flex; justify-content: space-between; align-items: center; background: var(--bg); position: sticky; top: 0; z-index: 10; }
   .logo-area { display: flex; align-items: center; gap: 10px; }
   .logo-icon { width: 40px; height: 40px; background: var(--primary); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; }
   .logo-text h1 { font-size: 16px; font-weight: 700; }
   .logo-text p { font-size: 12px; color: var(--text-light); }
-  
-  /* Logo Afernandes em SVG leve (evita quebrar o GitHub) */
   .logo-afernandes { height: 40px; max-width: 120px; object-fit: contain; }
 
-  /* Telas */
   .screen { display: none; padding: 0 16px; animation: fadeIn 0.3s ease; }
   .screen.active { display: block; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-  /* Busca */
   .search-bar { display: flex; gap: 8px; margin-bottom: 16px; }
   .search-input { flex: 1; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); font-size: 14px; outline: none; transition: border 0.2s; }
   .search-input:focus { border-color: var(--primary); }
@@ -46,11 +41,9 @@
   .btn-voice.listening { animation: pulse 1.5s infinite; background: var(--red); box-shadow: 0 4px 10px rgba(220,38,38,0.3); }
   @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
-  /* Cards Gerais */
   .card { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid var(--border); }
   .card-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
   
-  /* Dashboard */
   .welcome h2 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
   .welcome p { font-size: 13px; color: var(--text-light); margin-bottom: 16px; }
   .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
@@ -61,23 +54,19 @@
   .stat-box.done .val { color: var(--green); }
   .stat-box.pend .val { color: var(--red); }
   
-  /* Novo Card de Tempo */
   .time-card { display: flex; justify-content: space-between; align-items: center; }
   .time-card .info h3 { font-size: 14px; font-weight: 700; }
   .time-card .info p { font-size: 12px; color: var(--text-light); }
   .time-card .tempo-total { font-size: 24px; font-weight: 800; color: var(--primary); text-align: right; }
   
-  /* Lista de Status */
   .status-list { list-style: none; }
   .status-list li { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
   .status-list li:last-child { border-bottom: none; }
   .status-list li span.qtd { font-weight: 700; background: var(--bg); padding: 2px 8px; border-radius: 10px; }
   
-  /* Mapa */
   #map { height: 350px; border-radius: 12px; z-index: 1; margin-bottom: 12px; transition: filter 0.3s; }
   .dark-map .leaflet-layer { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
   
-  /* Painel do Ponto */
   .point-panel { background: var(--card); border-radius: 16px 16px 0 0; padding: 16px; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); border: 1px solid var(--border); border-bottom: none; position: relative; }
   .point-panel h3 { font-size: 14px; display: flex; justify-content: space-between; margin-bottom: 12px; }
   .point-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
@@ -85,13 +74,11 @@
   .point-grid .item span { display: block; font-size: 11px; color: var(--text-light); margin-bottom: 2px; }
   .point-grid .item b { font-weight: 600; color: var(--text); }
   
-  /* Botões de Rota */
   .route-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .btn-route { padding: 12px; border-radius: 12px; font-weight: 700; font-size: 13px; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px; border: none; cursor: pointer; color: white; }
   .btn-gmaps { background: #4285F4; }
   .btn-waze { background: #33CCFF; color: #000; }
 
-  /* Aba Base */
   .base-file { display: flex; align-items: center; gap: 12px; padding: 12px; background: #f8fafc; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 16px; }
   .base-file-icon { width: 40px; height: 40px; background: #dcfce7; color: var(--green); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
   .base-file-info h4 { font-size: 14px; font-weight: 600; }
@@ -102,13 +89,11 @@
   .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
   .btn-danger { background: #fee2e2; color: var(--red); }
 
-  /* Menu Inferior */
   .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding-top: 10px; padding-bottom: 60px; z-index: 999; }
   .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-light); font-size: 11px; font-weight: 600; text-decoration: none; }
   .nav-item.active { color: var(--primary); }
   .nav-icon { font-size: 20px; }
 
-  /* Utilitários */
   .hidden { display: none !important; }
   .badge-red { background: #fee2e2; color: var(--red); padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
   .badge-green { background: #dcfce7; color: var(--green); padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
@@ -125,6 +110,7 @@
       <p id="user-info">Operação - Carregando...</p>
     </div>
   </div>
+  <!-- Logo Afernandes -->
   <img src="logo.png" alt="Afernandes" class="logo-afernandes" onerror="this.style.display='none'">
 </header>
 
@@ -166,7 +152,6 @@
   <div class="card">
     <div class="card-title">Resumo das Leituras (Nota)</div>
     <ul class="status-list" id="lista-status">
-      <!-- Preenchido via JS -->
     </ul>
   </div>
 
@@ -311,7 +296,7 @@ function mudarTela(tela, el) {
 }
 
 function carregarDoLocalStorage() {
-  const saved = localStorage.getItem('baseLeituraApp_v7');
+  const saved = localStorage.getItem('baseLeituraApp_v8');
   if (saved) {
     baseDados = JSON.parse(saved);
     filtrarDados();
@@ -320,8 +305,28 @@ function carregarDoLocalStorage() {
 
 function salvarNoLocalStorage() {
   try {
-    localStorage.setItem('baseLeituraApp_v7', JSON.stringify(baseDados));
+    localStorage.setItem('baseLeituraApp_v8', JSON.stringify(baseDados));
   } catch (e) { }
+}
+
+// CONVERSOR DE TEMPO ROBUSTO
+function converterTempoParaSegundos(tempoStr) {
+  if (!tempoStr) return 0;
+  tempoStr = String(tempoStr).trim();
+  if (tempoStr.includes(':')) {
+    const partes = tempoStr.split(':');
+    if (partes.length >= 2) {
+      const h = parseInt(partes[0]) || 0;
+      const m = parseInt(partes[1]) || 0;
+      const s = parseInt(partes[2]) || 0;
+      return (h * 3600) + (m * 60) + s;
+    }
+  } else if (tempoStr.includes('.')) {
+    // Formato decimal (ex: 0.5 = meio dia)
+    const dias = parseFloat(tempoStr) || 0;
+    return Math.round(dias * 86400); // 86400 segundos em um dia
+  }
+  return 0;
 }
 
 function importarExcel(event) {
@@ -333,7 +338,7 @@ function importarExcel(event) {
     const data = new Uint8Array(e.target.result);
     const workbook = XLSX.read(data, { type: 'array' });
     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+    const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '', raw: false }); // raw: false garante que datas venham como string
 
     baseDados = rows.map(row => {
       const get = (keys) => {
@@ -355,7 +360,9 @@ function importarExcel(event) {
       const lng = parseFloat(lngStr);
       const temGps = (lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng));
 
-      let tempoStr = get(['tempo executado', 'hora da leitura']);
+      // Pega prioritariamente o "Tempo Executado". Se não tiver, tenta "Hora da leitura"
+      let tempoStr = get(['tempo executado']);
+      if (!tempoStr) tempoStr = get(['hora da leitura']);
       
       return {
         regional: get(['regional', 'livro']),
@@ -416,17 +423,10 @@ function filtrarDados() {
 function atualizarDashboard(termo = '') {
   const total = dadosFiltrados.length;
   
+  // SOMA DO TEMPO TOTAL
   let segundosTotais = 0;
   dadosFiltrados.forEach(r => {
-    if (r.tempoStr && r.tempoStr.includes(':')) {
-      const partes = r.tempoStr.split(':');
-      if (partes.length >= 2) {
-        const h = parseInt(partes[0]) || 0;
-        const m = parseInt(partes[1]) || 0;
-        const s = parseInt(partes[2]) || 0;
-        segundosTotais += (h * 3600) + (m * 60) + s;
-      }
-    }
+    segundosTotais += converterTempoParaSegundos(r.tempoStr);
   });
   
   const hTotal = Math.floor(segundosTotais / 3600).toString().padStart(2, '0');
@@ -434,6 +434,7 @@ function atualizarDashboard(termo = '') {
   const sTotal = (segundosTotais % 60).toString().padStart(2, '0');
   document.getElementById('stat-tempo').innerText = `${hTotal}:${mTotal}:${sTotal}`;
 
+  // CONTAGEM DE STATUS
   const contagemStatus = {};
   const statusBase = [
     'LEITURA NORMAL', 
@@ -606,7 +607,7 @@ function exportarExcel() {
 function limparBase() {
   if (confirm('Tem certeza que deseja apagar todos os dados do aplicativo?')) {
     baseDados = []; dadosFiltrados = [];
-    localStorage.removeItem('baseLeituraApp_v7');
+    localStorage.removeItem('baseLeituraApp_v8');
     filtrarDados();
     document.getElementById('search-input').value = '';
     document.getElementById('search-map').value = '';
