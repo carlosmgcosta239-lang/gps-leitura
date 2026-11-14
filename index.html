@@ -64,7 +64,6 @@
   .status-list li:last-child { border-bottom: none; }
   .status-list li span.qtd { font-weight: 700; background: var(--bg); padding: 2px 8px; border-radius: 10px; }
   
-  /* Card de Alerta UC Não Localizada */
   .alert-uc { background: #fef2f2; border: 2px solid #fca5a5; border-radius: 16px; padding: 16px; margin-bottom: 16px; display: none; align-items: center; justify-content: space-between; }
   .alert-uc .text h4 { color: #991b1b; font-size: 14px; font-weight: 700; }
   .alert-uc .text p { color: #b91c1c; font-size: 12px; margin-top: 4px; }
@@ -94,6 +93,14 @@
   .btn-primary { background: var(--primary); color: white; }
   .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
   .btn-danger { background: #fee2e2; color: var(--red); }
+  .btn-warning { background: #fef3c7; color: #d97706; border: 1px solid #fcd34d; }
+
+  /* Formulário de Ocorrência */
+  .form-group { margin-bottom: 12px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-light); margin-bottom: 4px; }
+  .form-control { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px; outline: none; background: #fff; }
+  .form-control:focus { border-color: var(--primary); }
+  textarea.form-control { resize: vertical; min-height: 60px; }
 
   .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding-top: 10px; padding-bottom: 60px; z-index: 999; }
   .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-light); font-size: 11px; font-weight: 600; text-decoration: none; }
@@ -156,8 +163,7 @@
 
   <div class="card">
     <div class="card-title">Resumo das Leituras (Nota)</div>
-    <ul class="status-list" id="lista-status">
-    </ul>
+    <ul class="status-list" id="lista-status"></ul>
   </div>
 
   <div class="card" id="alerta-gps" style="display: none; background: #fffbeb; border-color: #fcd34d;">
@@ -176,7 +182,6 @@
   
   <div id="map"></div>
 
-  <!-- NOVO ALERTA DE UC NÃO LOCALIZADA -->
   <div class="alert-uc" id="alert-uc-nao-localizada">
     <div class="text">
       <h4>🚨 Alerta de Qualidade</h4>
@@ -221,6 +226,39 @@
     <input type="file" id="file-input" accept=".xlsx, .xls, .csv" onchange="importarExcel(event)" style="position: absolute; inset: 0; opacity: 0; cursor: pointer;">
   </label>
 
+  <!-- NOVO FORMULÁRIO DE OCORRÊNCIAS -->
+  <div class="card" style="margin-top: 24px; border: 2px dashed #cbd5e1; background: #f8fafc;">
+    <div class="card-title" style="color: var(--primary);">
+      📝 Registrar Ocorrência em Campo
+    </div>
+    <p style="font-size: 11px; color: var(--text-light); margin-bottom: 12px;">Use esta opção se não encontrou o cliente ou se a UC pertence a outro livro.</p>
+
+    <div class="form-group">
+      <label>Identificação (UC ou Nº de Série)</label>
+      <input type="text" id="ocorrencia-id" class="form-control" placeholder="Ex: 48065503 ou 3370837">
+    </div>
+
+    <div class="form-group">
+      <label>Tipo de Ocorrência</label>
+      <select id="ocorrencia-tipo" class="form-control" onchange="toggleCampoReferencia()">
+        <option value="UC NÃO LOCALIZADA (Não encontrada)">UC NÃO LOCALIZADA (Não encontrada)</option>
+        <option value="REMANEJAR PARA OUTRO LIVRO (Encontrada em outra área)">REMANEJAR PARA OUTRO LIVRO (Encontrada em outra área)</option>
+      </select>
+    </div>
+
+    <div class="form-group hidden" id="group-referencia">
+      <label>Referência (Ex: Medidor ou UC vizinha)</label>
+      <input type="text" id="ocorrencia-referencia" class="form-control" placeholder="Ex: Nº de série da casa ao lado">
+    </div>
+
+    <div class="form-group">
+      <label>Observação Adicional</label>
+      <textarea id="ocorrencia-obs" class="form-control" placeholder="Ex: Rua sem saída, cliente mudou, etc..."></textarea>
+    </div>
+
+    <button class="btn btn-warning" onclick="salvarOcorrencia()">💾 Salvar Ocorrência</button>
+  </div>
+
   <div class="card" style="margin-top: 16px;">
     <div class="card-title">Campos disponíveis para busca e mapa</div>
     <div style="display: flex; flex-wrap: wrap; gap: 8px;">
@@ -255,6 +293,7 @@
 <script>
 let baseDados = [];
 let dadosFiltrados = [];
+let ocorrenciasCampo = []; // Armazena as ocorrências manuais
 let mapa = null;
 let camadaMarcadores = null;
 let marcadorSelecionado = null;
@@ -310,16 +349,21 @@ function mudarTela(tela, el) {
 }
 
 function carregarDoLocalStorage() {
-  const saved = localStorage.getItem('baseLeituraApp_v9');
+  const saved = localStorage.getItem('baseLeituraApp_v10');
   if (saved) {
-    baseDados = JSON.parse(saved);
+    const parsed = JSON.parse(saved);
+    baseDados = parsed.base || [];
+    ocorrenciasCampo = parsed.ocorrencias || [];
     filtrarDados();
   }
 }
 
 function salvarNoLocalStorage() {
   try {
-    localStorage.setItem('baseLeituraApp_v9', JSON.stringify(baseDados));
+    localStorage.setItem('baseLeituraApp_v10', JSON.stringify({
+      base: baseDados,
+      ocorrencias: ocorrenciasCampo
+    }));
   } catch (e) { }
 }
 
@@ -453,7 +497,7 @@ function atualizarDashboard(termo = '') {
     'SEM LEITURA. NECESSÁRIA INSPEÇÃO TÉCNICA', 
     'UC SEM MEDIDOR', 
     'IMPEDIMENTO DE ACESSO DO CLIENTE',
-    'UC NAO LOCALIZADA' // Adicionado no resumo
+    'UC NAO LOCALIZADA'
   ];
   
   statusBase.forEach(s => contagemStatus[s] = 0);
@@ -480,7 +524,6 @@ function atualizarDashboard(termo = '') {
   ul.innerHTML = '';
   Object.keys(contagemStatus).forEach(st => {
     if (contagemStatus[st] > 0 || statusBase.includes(st)) {
-      // Se for não localizada, destaca em vermelho no resumo
       const isAlerta = st === 'UC NAO LOCALIZADA';
       const corStyle = isAlerta ? 'color: #dc2626; font-weight: bold;' : '';
       ul.innerHTML += `<li style="${corStyle}"><span>${st}</span><span class="qtd" style="${isAlerta ? 'background: #fee2e2; color:#dc2626;' : ''}">${contagemStatus[st]}</span></li>`;
@@ -509,7 +552,6 @@ function atualizarDashboard(termo = '') {
     document.getElementById('alerta-gps').style.display = 'none';
   }
 
-  // Mostra o painel de Alerta na aba do Mapa
   const qtdNaoLocalizada = contagemStatus['UC NAO LOCALIZADA'] || 0;
   if (qtdNaoLocalizada > 0) {
     document.getElementById('alert-uc-nao-localizada').style.display = 'flex';
@@ -558,14 +600,14 @@ function atualizarMapa(termo = '') {
   dadosFiltrados.forEach(item => {
     if (!item.temGps) return;
 
-    let cor = '#dc2626'; // Vermelho padrão (Pendente)
+    let cor = '#dc2626';
     let raio = 8;
     
     if (item.status.toUpperCase().includes('NAO LOCALIZADA') || item.status.toUpperCase().includes('NÃO LOCALIZADA')) {
-      cor = '#7f1d1d'; // Vermelho Sangue (Alerta Crítico)
-      raio = 11; // Bolinha maior
+      cor = '#7f1d1d';
+      raio = 11;
     } else if (item.status && !item.status.includes('Pendente') && item.status !== '000') {
-      cor = '#16a34a'; // Verde (Concluída)
+      cor = '#16a34a';
     }
     
     const marker = L.circleMarker([item.lat, item.lng], {
@@ -632,18 +674,79 @@ function toggleVoz() {
   }
 }
 
+// ==================== NOVA FUNÇÃO: OCORRÊNCIAS DE CAMPO ====================
+function toggleCampoReferencia() {
+  const tipo = document.getElementById('ocorrencia-tipo').value;
+  const groupRef = document.getElementById('group-referencia');
+  if (tipo.includes('REMANEJAR')) {
+    groupRef.classList.remove('hidden');
+  } else {
+    groupRef.classList.add('hidden');
+  }
+}
+
+function salvarOcorrencia() {
+  const id = document.getElementById('ocorrencia-id').value.trim();
+  const tipo = document.getElementById('ocorrencia-tipo').value;
+  const ref = document.getElementById('ocorrencia-referencia').value.trim();
+  const obs = document.getElementById('ocorrencia-obs').value.trim();
+  
+  if (!id) {
+    alert('Por favor, informe a Instalação ou o Nº de Série.');
+    return;
+  }
+
+  // Tenta achar a UC na base para puxar o leiturista e dados originais
+  const idLimpo = id.replace(/[-\s]/g, '');
+  const registroOriginal = baseDados.find(r => r.uc.replace(/[-\s]/g, '') === idLimpo || r.medidor.replace(/[-\s]/g, '') === idLimpo);
+
+  const novaOcorrencia = {
+    dataHora: new Date().toLocaleString('pt-BR'),
+    identificacao: id,
+    tipo: tipo,
+    referenciaVizinha: ref,
+    observacao: obs,
+    status: 'REGISTRO MANUAL',
+    leiturista: registroOriginal ? registroOriginal.leiturista : 'Não identificado',
+    nome: registroOriginal ? registroOriginal.nome : '',
+    rua: registroOriginal ? registroOriginal.rua : '',
+    numero: registroOriginal ? registroOriginal.numero : ''
+  };
+
+  ocorrenciasCampo.push(novaOcorrencia);
+  salvarNoLocalStorage();
+
+  // Limpa o formulário
+  document.getElementById('ocorrencia-id').value = '';
+  document.getElementById('ocorrencia-referencia').value = '';
+  document.getElementById('ocorrencia-obs').value = '';
+  
+  alert('✅ Ocorrência registrada com sucesso! Ela será incluída no arquivo Excel ao baixar a base.');
+}
+
 function exportarExcel() {
   if (baseDados.length === 0) return alert('Não há dados para exportar.');
-  const ws = XLSX.utils.json_to_sheet(baseDados);
+  
+  // Exporta a Base Original
+  const wsBase = XLSX.utils.json_to_sheet(baseDados);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Leituras");
+  XLSX.utils.book_append_sheet(wb, wsBase, "Base Original");
+  
+  // Exporta as Ocorrências Manuais se houver
+  if (ocorrenciasCampo.length > 0) {
+    const wsOcorrencias = XLSX.utils.json_to_sheet(ocorrenciasCampo);
+    XLSX.utils.book_append_sheet(wb, wsOcorrencias, "Ocorrências de Campo");
+  }
+  
   XLSX.writeFile(wb, "Base_Atualizada_Leitura.xlsx");
 }
 
 function limparBase() {
   if (confirm('Tem certeza que deseja apagar todos os dados do aplicativo?')) {
-    baseDados = []; dadosFiltrados = [];
-    localStorage.removeItem('baseLeituraApp_v9');
+    baseDados = []; 
+    dadosFiltrados = [];
+    ocorrenciasCampo = [];
+    localStorage.removeItem('baseLeituraApp_v10');
     filtrarDados();
     document.getElementById('search-input').value = '';
     document.getElementById('search-map').value = '';
