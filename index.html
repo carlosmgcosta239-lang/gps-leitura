@@ -3,643 +3,509 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#1e40af">
-<title>GPS Leitura — Medidores v3</title>
+<meta name="theme-color" content="#f0f4f8">
+<title>Leitura em Campo</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
+  :root {
+    --bg: #f0f4f8;
+    --card: #ffffff;
+    --primary: #155eef;
+    --text: #1e293b;
+    --text-light: #64748b;
+    --green: #16a34a;
+    --red: #dc2626;
+    --border: #e2e8f0;
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
-  body { background: #0f172a; color: #e2e8f0; padding: 10px; min-height: 100vh; }
-  .app { max-width: 600px; margin: 0 auto; }
-  header { background: linear-gradient(135deg, #1e40af, #3b82f6); padding: 14px 16px; border-radius: 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
-  header h1 { font-size: 16px; }
-  header p { font-size: 11px; opacity: .85; margin-top: 2px; }
-  .badge-online { font-size: 11px; padding: 4px 10px; border-radius: 20px; background: #16a34a; font-weight: 700; }
-  .badge-online.off { background: #dc2626; }
-  .card { background: #1e293b; border-radius: 14px; padding: 14px; margin-bottom: 12px; }
-  .card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: #94a3b8; margin-bottom: 10px; display: flex; justify-content: space-between; }
-  input, select, button, textarea { width: 100%; padding: 11px; border-radius: 10px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 14px; margin-bottom: 8px; }
-  input[type="file"] { padding: 8px; font-size: 12px; }
-  button { background: #1e40af; border: none; font-weight: 700; cursor: pointer; transition: .15s; }
-  button:active { transform: scale(.98); }
-  button.sec { background: #334155; }
-  button.ok { background: #16a34a; }
-  button.warn { background: #dc2626; }
-  button.small { padding: 7px; font-size: 12px; margin: 0; width: auto; }
-  .status { font-size: 13px; padding: 9px; border-radius: 8px; margin-bottom: 8px; background: #0f172a; }
-  .status.ok { background: #14532d; color: #bbf7d0; }
-  .status.bad { background: #7f1d1d; color: #fecaca; }
-  .status.info { background: #1e3a8a; color: #bfdbfe; }
-  .row { display: flex; gap: 6px; }
-  .row > * { flex: 1; }
-  small { color: #64748b; font-size: 11px; display: block; margin-bottom: 6px; }
-  .hidden { display: none; }
+  body { background: var(--bg); color: var(--text); padding-bottom: 70px; }
+  
+  /* Header */
+  header { padding: 16px; display: flex; justify-content: space-between; align-items: center; background: var(--bg); position: sticky; top: 0; z-index: 10; }
+  .logo-area { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 40px; height: 40px; background: var(--primary); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; }
+  .logo-text h1 { font-size: 16px; font-weight: 700; }
+  .logo-text p { font-size: 12px; color: var(--text-light); }
+  .avatar { width: 36px; height: 36px; background: #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--primary); }
+
+  /* Telas */
+  .screen { display: none; padding: 0 16px; animation: fadeIn 0.3s ease; }
+  .screen.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Busca */
+  .search-bar { display: flex; gap: 8px; margin-bottom: 16px; }
+  .search-input { flex: 1; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); font-size: 14px; outline: none; transition: border 0.2s; }
+  .search-input:focus { border-color: var(--primary); }
+  .btn-voice { width: 46px; height: 46px; border-radius: 12px; background: var(--primary); color: white; border: none; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(21,94,239,0.3); }
+  .btn-voice.listening { animation: pulse 1.5s infinite; background: var(--red); box-shadow: 0 4px 10px rgba(220,38,38,0.3); }
+  @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+  /* Cards Gerais */
+  .card { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid var(--border); }
+  .card-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
   
   /* Dashboard */
-  .dash { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
-  .dash .item { background: #0f172a; border-radius: 10px; padding: 10px 6px; text-align: center; }
-  .dash .item .n { font-size: 20px; font-weight: 800; }
-  .dash .item .l { font-size: 10px; color: #94a3b8; text-transform: uppercase; margin-top: 2px; }
-  .dash .ok .n { color: #4ade80; }
-  .dash .pend .n { color: #fbbf24; }
-  .dash .prec .n { color: #60a5fa; }
-  .progress { height: 8px; background: #0f172a; border-radius: 8px; overflow: hidden; margin-top: 6px; }
-  .progress > div { height: 100%; background: linear-gradient(90deg, #16a34a, #4ade80); transition: .3s; }
-
-  /* Lista UCs */
-  .uc-item { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 10px; margin-bottom: 6px; font-size: 13px; cursor: pointer; transition: .15s; }
-  .uc-item:active { background: #1e293b; }
-  .uc-item b { color: #60a5fa; }
-  .uc-item .coord { color: #94a3b8; font-size: 11px; margin-top: 3px; display: block; }
-  .uc-item .badge { float: right; font-size: 10px; padding: 2px 7px; border-radius: 5px; font-weight: 700; }
-  .badge.valid { background: #14532d; color: #86efac; }
-  .badge.pendente { background: #78350f; color: #fcd34d; }
-  .badge.fora { background: #7f1d1d; color: #fca5a5; }
+  .welcome h2 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .welcome p { font-size: 13px; color: var(--text-light); margin-bottom: 16px; }
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .stat-box { background: var(--card); border-radius: 12px; padding: 12px; border: 1px solid var(--border); }
+  .stat-box .val { font-size: 20px; font-weight: 800; }
+  .stat-box .lbl { font-size: 11px; color: var(--text-light); margin-top: 4px; }
+  .stat-box.total .val { color: var(--text); }
+  .stat-box.done .val { color: var(--green); }
+  .stat-box.pend .val { color: var(--red); }
+  
+  .progress-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 8px; }
+  .progress-fill { height: 100%; background: var(--green); transition: width 0.5s; }
   
   /* Mapa */
-  #mapa { height: 280px; border-radius: 10px; margin-bottom: 8px; z-index: 1; }
+  #map { height: 300px; border-radius: 12px; z-index: 1; margin-bottom: 12px; }
   
-  /* Foto */
-  .foto-preview { width: 100%; max-height: 200px; object-fit: cover; border-radius: 10px; margin-bottom: 8px; }
-  .foto-btn { position: relative; overflow: hidden; }
-  .foto-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  /* Aba Base */
+  .base-file { display: flex; align-items: center; gap: 12px; padding: 12px; background: #f8fafc; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 16px; }
+  .base-file-icon { width: 40px; height: 40px; background: #dcfce7; color: var(--green); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .base-file-info h4 { font-size: 14px; font-weight: 600; }
+  .base-file-info p { font-size: 12px; color: var(--text-light); }
   
-  /* Modal detalhe */
-  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.8); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 16px; }
-  .modal { background: #1e293b; border-radius: 16px; padding: 18px; max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto; }
-  .modal h3 { color: #60a5fa; margin-bottom: 12px; }
-  .modal .foto-preview { max-height: 250px; }
-  .modal .kv { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #334155; font-size: 13px; gap: 10px;}
-  .modal .kv span:first-child { color: #94a3b8; white-space: nowrap; }
-  .modal .kv span:last-child { text-align: right; }
-  .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
-  .tabs button { background: #0f172a; margin: 0; padding: 8px; font-size: 12px; }
-  .tabs button.active { background: #1e40af; }
+  .btn { width: 100%; padding: 14px; border-radius: 12px; border: none; font-weight: 700; font-size: 14px; display: flex; justify-content: center; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 8px; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+  .btn-danger { background: #fee2e2; color: var(--red); }
+
+  /* Menu Inferior */
+  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 20px 0; z-index: 999; }
+  .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-light); font-size: 11px; font-weight: 600; text-decoration: none; }
+  .nav-item.active { color: var(--primary); }
+  .nav-icon { font-size: 20px; }
+
+  /* Utilitários */
+  .hidden { display: none !important; }
+  .badge-red { background: #fee2e2; color: var(--red); padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+  .badge-green { background: #dcfce7; color: var(--green); padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+  .badge-gray { background: #f1f5f9; color: var(--text-light); padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+  
+  /* Painel do Ponto */
+  .point-panel { background: var(--card); border-radius: 16px 16px 0 0; padding: 16px; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); }
+  .point-panel h3 { font-size: 14px; display: flex; justify-content: space-between; }
+  .point-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .point-grid .item { font-size: 13px; }
+  .point-grid .item span { display: block; font-size: 11px; color: var(--text-light); margin-bottom: 2px; }
+  .point-grid .item b { font-weight: 600; color: var(--text); }
 </style>
 </head>
 <body>
-<div class="app">
-  <header>
-    <div>
-      <h1>⚡ GPS Leitura v3</h1>
-      <p>Validação de coordenadas — UCs</p>
-    </div>
-    <span class="badge-online" id="online">● ON</span>
-  </header>
 
-  <!-- LEITOR -->
+<!-- HEADER GLOBAL -->
+<header>
+  <div class="logo-area">
+    <div class="logo-icon">⚡</div>
+    <div class="logo-text">
+      <h1>LEITURA EM CAMPO</h1>
+      <p id="user-info">Supervisor - Carregando...</p>
+    </div>
+  </div>
+  <div class="avatar">OP</div>
+</header>
+
+<!-- TELA 1: INÍCIO -->
+<div id="screen-home" class="screen active">
+  <div class="welcome">
+    <h2>Bom dia, Supervisor</h2>
+    <p id="filtro-atual">Nenhuma base carregada</p>
+  </div>
+
+  <div class="search-bar">
+    <input type="text" id="search-input" class="search-input" placeholder="Buscar UC, medidor, nome..." oninput="filtrarDados()">
+    <button class="btn-voice" id="btn-mic" onclick="toggleVoz()">🎤</button>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-box total">
+      <div class="val" id="stat-total">0</div>
+      <div class="lbl">Leituras</div>
+    </div>
+    <div class="stat-box done">
+      <div class="val" id="stat-concluidas">0</div>
+      <div class="lbl">Concluídas</div>
+    </div>
+    <div class="stat-box pend">
+      <div class="val" id="stat-pendentes">0</div>
+      <div class="lbl">Pendentes</div>
+    </div>
+  </div>
+
   <div class="card">
-    <h2>👤 Leitor</h2>
-    <input id="leitor" placeholder="Nome / matrícula">
-  </div>
-
-  <!-- DASHBOARD -->
-  <div class="card">
-    <h2>📊 Progresso</h2>
-    <div class="dash">
-      <div class="item ok"><div class="n" id="dVal">0</div><div class="l">Validadas</div></div>
-      <div class="item pend"><div class="n" id="dPend">0</div><div class="l">Pendentes</div></div>
-      <div class="item prec"><div class="n" id="dPrec">—</div><div class="l">Precisão média</div></div>
+    <div class="card-title">
+      Progresso da Etapa <span id="stat-porcentagem" style="color: var(--green)">0%</span>
     </div>
-    <div class="progress"><div id="barra" style="width:0%"></div></div>
-  </div>
-
-  <!-- IMPORTAR -->
-  <div class="card">
-    <h2>📥 Importar base SAP</h2>
-    <small>Colunas esperadas: Instalação, Nº de série, Nome, Rua, Latitude e Longitude (Retorno).</small>
-    <input type="file" id="arquivo" accept=".xlsx,.xls,.csv">
-    <div class="row">
-      <button class="sec small" onclick="limparBase()">🗑 Limpar base</button>
-      <button class="sec small" onclick="importarHistorico()">🔄 Mesclar histórico</button>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-bar-fill" style="width: 0%"></div>
     </div>
-    <div id="infoBase" class="status"></div>
-  </div>
-
-  <!-- TABS -->
-  <div class="tabs">
-    <button id="tabCaptura" class="active" onclick="mudarTab('captura')">📍 Captura</button>
-    <button id="tabMapa" onclick="mudarTab('mapa')">🗺 Mapa</button>
-    <button id="tabLista" onclick="mudarTab('lista')">📋 Lista</button>
-  </div>
-
-  <!-- CAPTURA GPS -->
-  <div class="card" id="cardGps">
-    <h2>📍 Capturar coordenadas</h2>
-    <div id="ucAtual" class="status info">Nenhuma UC carregada</div>
-    <div id="alertaRaio" class="hidden"></div>
-    <div id="gpsStatus" class="status">Toque para capturar a posição</div>
-
-    <div class="foto-btn">
-      <button class="sec" style="pointer-events:none">📸 Tirar foto do medidor</button>
-      <input type="file" accept="image/*" capture="environment" id="fotoInput" onchange="processarFoto(event)">
+    <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--text-light)">
+      <span id="prog-concluidas">0 concluídas</span>
+      <span id="prog-restantes">0 restantes</span>
     </div>
-    <img id="fotoPreview" class="foto-preview hidden">
-    <button class="sec small" id="btnRemoverFoto" onclick="removerFoto()" style="display:none;margin-bottom:8px">✖ Remover foto</button>
-
-    <div class="row">
-      <button class="ok" onclick="capturarGPS()">📡 Capturar GPS</button>
-      <button class="sec" onclick="pularUC()">⏭ Pular</button>
-    </div>
-    <button class="ok" style="margin-top:6px" onclick="salvarCoordenada()">💾 Salvar coordenada</button>
   </div>
 
-  <!-- MAPA -->
-  <div class="card hidden" id="cardMapa">
-    <h2>🗺 Mapa das UCs</h2>
-    <div id="mapa"></div>
-    <small>🟢 validada · 🟡 pendente · 🔴 fora do raio</small>
-  </div>
-
-  <!-- LISTA -->
-  <div class="card hidden" id="cardLista">
-    <h2>📋 Unidades (<span id="contador">0</span>)</h2>
-    <input class="busca" id="busca" placeholder="🔍 Buscar por UC, Nº de série ou endereço..." oninput="renderLista()">
-    <div id="listaUC"></div>
-  </div>
-
-  <!-- EXPORTAR -->
-  <div class="card">
-    <h2>📤 Exportar</h2>
-    <div class="row">
-      <button class="ok" onclick="exportarCSV()">⬇️ CSV</button>
-      <button class="sec" onclick="exportarXLSX()">⬇️ Excel</button>
-    </div>
-    <button class="sec" onclick="exportarXLSXLimpo()">📦 Exportar só validadas (para SAP)</button>
+  <div class="card" id="alerta-gps" style="display: none; background: #fffbeb; border-color: #fcd34d;">
+    <div class="card-title" style="color: #92400e;">⚠️ Alerta de GPS</div>
+    <p style="font-size: 13px; color: #92400e;">Existem <b id="qtd-gps-zero">0</b> coordenadas com valor zero. Peça aos colaboradores para ativarem o GPS do celular!</p>
   </div>
 </div>
 
+<!-- TELA 2: MAPA -->
+<div id="screen-mapa" class="screen">
+  <div class="search-bar">
+    <input type="text" id="search-map" class="search-input" placeholder="Buscar ponto no mapa..." oninput="filtrarDados()">
+    <button class="btn-voice" onclick="toggleVoz()">🎤</button>
+  </div>
+  
+  <div id="map"></div>
+  
+  <div id="point-details" class="point-panel hidden">
+    <h3 id="pd-title">Ponto Selecionado <span id="pd-status" class="badge-gray">Pendente</span></h3>
+    <div class="point-grid">
+      <div class="item"><span>Consumidor</span><b id="pd-nome">-</b></div>
+      <div class="item"><span>UC / Instalação</span><b id="pd-uc">-</b></div>
+      <div class="item"><span>Medidor</span><b id="pd-medidor">-</b></div>
+      <div class="item"><span>Endereço</span><b id="pd-endereco">-</b></div>
+      <div class="item" style="grid-column: span 2"><span>Coordenada</span><b id="pd-coord">-</b></div>
+    </div>
+  </div>
+</div>
+
+<!-- TELA 3: BASE -->
+<div id="screen-base" class="screen">
+  <h2 style="font-size: 20px; margin-bottom: 4px;">Base de Dados</h2>
+  <p style="font-size: 13px; color: var(--text-light); margin-bottom: 16px;">Gerencie os dados usados nas leituras e no mapa.</p>
+
+  <div class="base-file">
+    <div class="base-file-icon">📄</div>
+    <div class="base-file-info">
+      <h4>BASE PARA APP.xlsx</h4>
+      <p id="base-registros">Nenhum registro carregado</p>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" onclick="exportarExcel()">⬇️ Baixar base em Excel</button>
+  
+  <label class="btn btn-outline" style="position: relative; overflow: hidden;">
+    ⬆️ Importar ou atualizar base
+    <input type="file" id="file-input" accept=".xlsx, .xls, .csv" onchange="importarExcel(event)" style="position: absolute; inset: 0; opacity: 0; cursor: pointer;">
+  </label>
+
+  <div class="card" style="margin-top: 16px;">
+    <div class="card-title">Campos disponíveis para busca e mapa</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+      <span class="badge-gray">Instalação</span>
+      <span class="badge-gray">Nº de série</span>
+      <span class="badge-gray">Nome do consumidor</span>
+      <span class="badge-gray">Rua</span>
+      <span class="badge-gray">Latitude</span>
+      <span class="badge-gray">Longitude</span>
+    </div>
+  </div>
+
+  <button class="btn btn-danger" onclick="limparBase()" style="margin-top: 16px;">🗑 Limpar base</button>
+  <p style="text-align: center; font-size: 11px; color: var(--text-light); margin-top: 8px;">A base poderá ser importada novamente depois.</p>
+</div>
+
+<!-- MENU INFERIOR -->
+<nav class="bottom-nav">
+  <a href="#" class="nav-item active" onclick="mudarTela('home', this)">
+    <span class="nav-icon">🏠</span>
+    Início
+  </a>
+  <a href="#" class="nav-item" onclick="mudarTela('mapa', this)">
+    <span class="nav-icon">🗺️</span>
+    Mapa
+  </a>
+  <a href="#" class="nav-item" onclick="mudarTela('base', this)">
+    <span class="nav-icon">🗄️</span>
+    Base
+  </a>
+</nav>
+
 <script>
-// ==================== ESTADO ====================
-let base = [];
-let indiceAtual = 0;
-let gpsCapturado = null;
-let fotoTemp = null;
+// ==================== ESTADO GLOBAL ====================
+let baseDados = [];
+let dadosFiltrados = [];
 let mapa = null;
 let camadaMarcadores = null;
+let marcadorSelecionado = null;
+let reconhecimentoVoz = null;
 
-// ==================== PERSISTÊNCIA ====================
-function carregar() {
-  const raw = localStorage.getItem('baseUC_v3');
-  if (raw) base = JSON.parse(raw);
-  document.getElementById('leitor').value = localStorage.getItem('leitor') || '';
-  atualizarOnline();
-  render();
-}
-
-function salvar() { localStorage.setItem('baseUC_v3', JSON.stringify(base)); }
-
-document.getElementById('leitor').addEventListener('input', e => localStorage.setItem('leitor', e.target.value));
-
-function atualizarOnline() {
-  const el = document.getElementById('online');
-  if (navigator.onLine) { el.textContent = '● ON'; el.classList.remove('off'); }
-  else { el.textContent = '● OFF'; el.classList.add('off'); }
-}
-window.addEventListener('online', atualizarOnline);
-window.addEventListener('offline', atualizarOnline);
-
-// ==================== IMPORTAÇÃO ====================
-document.getElementById('arquivo').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const data = await file.arrayBuffer();
-  const wb = XLSX.read(data, { type: 'array' });
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
-
-  // Função robusta para achar colunas ignorando acentos e maiúsculas
-  const getCol = (row, ...keys) => {
-    for (const k of keys) {
-      const found = Object.keys(row).find(c => c.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")));
-      if (found && row[found] !== '') return String(row[found]).trim();
-    }
-    return '';
-  };
-
-  base = rows.map(row => {
-    // Pega o nome e sobrenome e junta
-    const nome1 = getCol(row, '1º nome', 'nome');
-    const nome2 = getCol(row, 'sobrenome');
-    const cliente = `${nome1} ${nome2}`.trim();
-
-    return {
-      uc: getCol(row, 'instalacao', 'instalação', 'uc', 'unidade', 'contrato'),
-      serie: getCol(row, 'serie', 'série', 'medidor', 'equipamento'),
-      regional: getCol(row, 'regional', 'localidade'),
-      cliente: cliente || 'Não informado',
-      endereco: getCol(row, 'rua', 'endereço', 'logradouro'),
-      numero: getCol(row, 'numero', 'número'),
-      bairro: getCol(row, 'bairro', 'descricao da localidade'),
-      // Coordenadas que JÁ VÊM no excel do SAP
-      lat: getCol(row, 'valor latitude - retorno', 'latitude', 'lat'),
-      lng: getCol(row, 'valor longitude - retorno', 'longitude', 'lng'),
-      precisao: getCol(row, 'precisao', 'precisão'),
-      data: getCol(row, 'data'),
-      leitor: getCol(row, 'leitor'),
-      status: getCol(row, 'status') || (getCol(row, 'valor latitude - retorno') ? 'validada' : 'pendente'),
-      foto: ''
+// ==================== INICIALIZAÇÃO ====================
+document.addEventListener('DOMContentLoaded', () => {
+  carregarDoLocalStorage();
+  
+  // Configurar Voz (Web Speech API)
+  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    reconhecimentoVoz = new SpeechRecognition();
+    reconhecimentoVoz.lang = 'pt-BR';
+    reconhecimentoVoz.continuous = false;
+    reconhecimentoVoz.interimResults = false;
+    
+    reconhecimentoVoz.onresult = (event) => {
+      const texto = event.results[0][0].transcript;
+      document.getElementById('search-input').value = texto;
+      document.getElementById('search-map').value = texto;
+      filtrarDados();
+      document.getElementById('btn-mic').classList.remove('listening');
     };
-  }).filter(r => r.uc); // Só aceita se tiver o número da UC
-
-  indiceAtual = 0;
-  salvar(); render();
-  alert(`${base.length} UCs importadas com sucesso!`);
+    
+    reconhecimentoVoz.onerror = () => {
+      document.getElementById('btn-mic').classList.remove('listening');
+      alert('Não foi possível ouvir. Verifique a permissão do microfone.');
+    };
+    
+    reconhecimentoVoz.onend = () => {
+      document.getElementById('btn-mic').classList.remove('listening');
+    };
+  }
 });
 
-function importarHistorico() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.xlsx,.xls,.csv';
-  input.onchange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const data = await file.arrayBuffer();
-    const wb = XLSX.read(data, { type: 'array' });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
-
-    let mescladas = 0;
-    rows.forEach(row => {
-      const uc = String(row['UC/Instalação'] || row['UC'] || row['Instalação'] || '').trim();
-      if (!uc) return;
-      const idx = base.findIndex(b => b.uc === uc);
-      if (idx !== -1 && row['Latitude'] && row['Longitude']) {
-        if (!base[idx].latAnterior) {
-          base[idx].latAnterior = String(row['Latitude']);
-          base[idx].lngAnterior = String(row['Longitude']);
-        }
-        mescladas++;
-      }
-    });
-    salvar(); render();
-    alert(`Histórico mesclado em ${mescladas} UCs.`);
-  };
-  input.click();
-}
-
-function limparBase() {
-  if (!confirm('Apagar toda a base local?')) return;
-  base = []; indiceAtual = 0; gpsCapturado = null; fotoTemp = null;
-  salvar(); render();
-}
-
 // ==================== NAVEGAÇÃO ====================
-function proximaPendente() {
-  for (let i = 0; i < base.length; i++) if (base[i].status === 'pendente' || base[i].status === 'fora') return i;
-  return -1;
-}
-
-function render() {
-  const val = base.filter(u => u.status === 'validada').length;
-  const pend = base.filter(u => u.status !== 'validada').length;
-  document.getElementById('dVal').textContent = val;
-  document.getElementById('dPend').textContent = pend;
-  const comPrec = base.filter(u => u.precisao && u.status === 'validada');
-  const precMedia = comPrec.length ? Math.round(comPrec.reduce((s,u) => s + Number(u.precisao), 0) / comPrec.length) : null;
-  document.getElementById('dPrec').textContent = precMedia ? `±${precMedia}m` : '—';
-  document.getElementById('barra').style.width = base.length ? (val/base.length*100) + '%' : '0%';
-
-  const info = document.getElementById('infoBase');
-  if (base.length > 0) {
-    info.className = 'status ok';
-    info.textContent = `📊 ${base.length} UCs | ✔ ${val} validadas | ⏳ ${pend} pendentes`;
-  } else {
-    info.className = 'status';
-    info.textContent = 'Nenhuma base carregada.';
-  }
-
-  // Card captura
-  const idx = proximaPendente();
-  if (base.length === 0 || idx === -1) {
-    document.getElementById('ucAtual').className = 'status';
-    document.getElementById('ucAtual').innerHTML = base.length
-      ? '🎉 Todas as UCs foram validadas!'
-      : 'Nenhuma UC carregada';
-    document.getElementById('alertaRaio').className = 'hidden';
-  } else {
-    const uc = base[idx];
-    indiceAtual = idx;
-    document.getElementById('ucAtual').className = 'status info';
-    document.getElementById('ucAtual').innerHTML =
-      `<b>UC ${uc.uc} / Medidor ${uc.serie}</b><br>${uc.cliente}<br>${uc.endereco}, ${uc.numero} - ${uc.bairro}`;
-    verificarRaio(uc);
-  }
-
-  renderLista();
-  if (mapa) renderMapa();
-}
-
-// ==================== VALIDAÇÃO DE RAIO ====================
-function verificarRaio(uc) {
-  const el = document.getElementById('alertaRaio');
-  // Verifica se tem coordenadas que vieram do SAP
-  if (!uc.lat || !uc.lng) { el.className = 'hidden'; return; }
-  el.className = 'status info';
-  el.innerHTML = `📍 <b>GPS Registrado no SAP:</b><br>
-    Lat: ${uc.lat} | Long: ${uc.lng}<br>
-    <small>O app avisará se a nova captura for muito longe deste ponto.</small>`;
-}
-
-function distanciaMetros(lat1, lng1, lat2, lng2) {
-  const R = 6371000;
-  const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
-  const Δφ = (lat2-lat1) * Math.PI/180;
-  const Δλ = (lng2-lng1) * Math.PI/180;
-  const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
-  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}
-
-// ==================== GPS ====================
-function capturarGPS() {
-  const status = document.getElementById('gpsStatus');
-  status.className = 'status';
-  status.textContent = '📡 Capturando GPS... aguarde.';
-
-  if (!navigator.geolocation) {
-    status.className = 'status bad';
-    status.textContent = '❌ GPS não disponível.';
-    return;
-  }
-
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      const { latitude, longitude, accuracy } = pos.coords;
-      gpsCapturado = { lat: latitude.toFixed(7), lng: longitude.toFixed(7), precisao: Math.round(accuracy) };
-
-      const precisa = accuracy <= 15;
-      status.className = precisa ? 'status ok' : 'status bad';
-
-      let html = `✅ ${latitude.toFixed(6)}, ${longitude.toFixed(6)}<br>
-        Precisão: <b>±${Math.round(accuracy)}m</b> ${precisa ? '(ok)' : '(⚠ fraca)'}`;
-
-      // Validação de raio usando as coordenadas do SAP
-      const uc = base[indiceAtual];
-      if (uc && uc.lat && uc.lng) {
-        const dist = distanciaMetros(latitude, longitude, parseFloat(uc.lat), parseFloat(uc.lng));
-        const fora = dist > 30; // Limite de 30 metros
-        html += `<br>${fora ? '⚠' : '✅'} Distância do GPS do SAP: <b>${dist.toFixed(1)}m</b> ${fora ? '(FORA DO RAIO!)' : '(ok)'}`;
-        if (fora) status.className = 'status bad';
-      }
-      status.innerHTML = html;
-    },
-    (err) => {
-      status.className = 'status bad';
-      status.textContent = '❌ Erro GPS: ' + err.message;
-    },
-    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-  );
-}
-
-// ==================== FOTO ====================
-function processarFoto(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const max = 800;
-      let w = img.width, h = img.height;
-      if (w > max) { h = h * max / w; w = max; }
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      fotoTemp = canvas.toDataURL('image/jpeg', 0.7);
-      const prev = document.getElementById('fotoPreview');
-      prev.src = fotoTemp;
-      prev.classList.remove('hidden');
-      document.getElementById('btnRemoverFoto').style.display = 'block';
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-function removerFoto() {
-  fotoTemp = null;
-  document.getElementById('fotoPreview').classList.add('hidden');
-  document.getElementById('btnRemoverFoto').style.display = 'none';
-  document.getElementById('fotoInput').value = '';
-}
-
-// ==================== SALVAR ====================
-function salvarCoordenada() {
-  if (indiceAtual === -1) return;
-  if (!gpsCapturado) { alert('Capture o GPS antes de salvar.'); return; }
-  const leitor = document.getElementById('leitor').value.trim();
-  if (!leitor) { alert('Informe seu nome/matrícula.'); return; }
-
-  const uc = base[indiceAtual];
-
-  let status = 'validada';
-  if (uc.lat && uc.lng) {
-    const dist = distanciaMetros(
-      parseFloat(gpsCapturado.lat), parseFloat(gpsCapturado.lng),
-      parseFloat(uc.lat), parseFloat(uc.lng)
-    );
-    if (dist > 30) {
-      if (!confirm(`⚠ A coordenada nova está a ${dist.toFixed(1)}m do GPS que veio no SAP.\n\nSalvar mesmo assim como "fora do raio"?`)) return;
-      status = 'fora';
-    }
-  }
-
-  base[indiceAtual] = {
-    ...uc,
-    // Cria um "histórico" da coordenada antiga para não perder a referência
-    latAnterior: uc.lat, 
-    lngAnterior: uc.lng,
-    // Salva a nova
-    lat: gpsCapturado.lat,
-    lng: gpsCapturado.lng,
-    precisao: gpsCapturado.precisao,
-    data: new Date().toLocaleString('pt-BR'),
-    leitor,
-    status,
-    foto: fotoTemp || uc.foto || ''
-  };
-
-  gpsCapturado = null;
-  fotoTemp = null;
-  document.getElementById('gpsStatus').className = 'status';
-  document.getElementById('gpsStatus').textContent = 'Toque para capturar a posição';
-  document.getElementById('fotoPreview').classList.add('hidden');
-  document.getElementById('btnRemoverFoto').style.display = 'none';
-  document.getElementById('fotoInput').value = '';
-
-  salvar(); render();
-}
-
-function pularUC() {
-  if (indiceAtual === -1) return;
-  const [uc] = base.splice(indiceAtual, 1);
-  base.push(uc);
-  salvar(); render();
-}
-
-// ==================== LISTA ====================
-function renderLista() {
-  const lista = document.getElementById('listaUC');
-  const busca = (document.getElementById('busca')?.value || '').toLowerCase();
-  document.getElementById('contador').textContent = base.length;
-  lista.innerHTML = '';
-
-  base.forEach((uc, i) => {
-    // Busca inteligente (aceita UC, nome, rua, série)
-    const textoBusca = `${uc.uc} ${uc.serie} ${uc.cliente} ${uc.endereco} ${uc.bairro}`.toLowerCase();
-    if (busca && !textoBusca.includes(busca)) return;
-    
-    const div = document.createElement('div');
-    div.className = 'uc-item';
-    const cls = uc.status === 'validada' ? 'valid' : uc.status === 'fora' ? 'fora' : 'pendente';
-    const lbl = uc.status === 'validada' ? '✔ validada' : uc.status === 'fora' ? '⚠ fora' : '⏳ pendente';
-    div.innerHTML = `<span class="badge ${cls}">${lbl}</span>
-      <b>${uc.uc}</b> - Medidor ${uc.serie}<br>
-      ${uc.cliente}<br>
-      ${uc.endereco}, ${uc.numero}<br>
-      <span class="coord">${uc.lat ? `📍 ${uc.lat}, ${uc.lng} (±${uc.precisao||0}m) — ${uc.data||''}` : 'sem coordenada'}</span>`;
-    div.onclick = () => abrirDetalhe(i);
-    lista.appendChild(div);
-  });
-}
-
-function abrirDetalhe(i) {
-  const uc = base[i];
-  const bg = document.createElement('div');
-  bg.className = 'modal-bg';
-  bg.onclick = (e) => { if (e.target === bg) bg.remove(); };
+function mudarTela(tela, el) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   
-  // Monta o HTML do modal
-  bg.innerHTML = `<div class="modal">
-    <h3>UC ${uc.uc}</h3>
-    ${uc.foto ? `<img class="foto-preview" src="${uc.foto}">` : ''}
-    
-    <div class="kv"><span>Regional</span><span>${uc.regional || '-'}</span></div>
-    <div class="kv"><span>Cliente</span><span>${uc.cliente || '-'}</span></div>
-    <div class="kv"><span>Endereço</span><span>${uc.endereco || '-'}, ${uc.numero || 'S/N'}</span></div>
-    <div class="kv"><span>Bairro</span><span>${uc.bairro || '-'}</span></div>
-    <div class="kv"><span>Nº de Série</span><span>${uc.serie || '-'}</span></div>
-    
-    <div class="kv" style="background:#14532d; padding:8px; border-radius:6px; margin-top:8px">
-      <span>Latitude (Atual)</span><span><b>${uc.lat || '-'}</b></span>
-    </div>
-    <div class="kv" style="background:#14532d; padding:8px; border-radius:6px;">
-      <span>Longitude (Atual)</span><span><b>${uc.lng || '-'}</b></span>
-    </div>
+  document.getElementById('screen-' + tela).classList.add('active');
+  el.classList.add('active');
 
-    <div class="kv"><span>Precisão GPS</span><span>${uc.precisao ? '±'+uc.precisao+'m' : '-'}</span></div>
-    <div class="kv"><span>Data/Hora Captura</span><span>${uc.data || '-'}</span></div>
-    <div class="kv"><span>Leitor</span><span>${uc.leitor || '-'}</span></div>
-    <div class="kv"><span>Status</span><span>${uc.status}</span></div>
-    
-    ${uc.lat ? `<button class="sec" style="margin-top:10px" onclick="window.open('https://www.google.com/maps?q=${uc.lat},${uc.lng}','_blank')">🗺 Abrir no Google Maps</button>` : ''}
-    <button class="warn" style="margin-top:6px" onclick="this.closest('.modal-bg').remove()">Fechar</button>
-  </div>`;
-  document.body.appendChild(bg);
+  if (tela === 'mapa' && !mapa) {
+    setTimeout(initMapa, 100);
+  }
+}
+
+// ==================== LÓGICA DE DADOS ====================
+function carregarDoLocalStorage() {
+  const saved = localStorage.getItem('baseLeituraApp_v4');
+  if (saved) {
+    baseDados = JSON.parse(saved);
+    filtrarDados();
+  }
+}
+
+function salvarNoLocalStorage() {
+  try {
+    localStorage.setItem('baseLeituraApp_v4', JSON.stringify(baseDados));
+  } catch (e) {
+    alert('Aviso: A base é muito grande para ser salva localmente. Os dados funcionarão, mas ao fechar o app você precisará importar novamente.');
+  }
+}
+
+function importarExcel(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+
+    // Mapeamento robusto baseado na nova planilha
+    baseDados = rows.map(row => {
+      const get = (keys) => {
+        for (const k of keys) {
+          const found = Object.keys(row).find(c => c.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(k.toLowerCase()));
+          if (found && row[found] !== '') return row[found];
+        }
+        return '';
+      };
+
+      const nome1 = get(['1º nome', 'nome']);
+      const nome2 = get(['sobrenome']);
+      const nomeCompleto = `${nome1} ${nome2}`.trim();
+
+      // Verifica se a coordenada é válida (não é zero e não está vazia)
+      const latStr = String(get(['valor latitude - retorno', 'latitude', 'lat'])).replace(',', '.');
+      const lngStr = String(get(['valor longitude - retorno', 'longitude', 'lng'])).replace(',', '.');
+
+      const lat = parseFloat(latStr);
+      const lng = parseFloat(lngStr);
+      
+      const temGps = (lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng));
+
+      return {
+        regional: get(['regional', 'livro']),
+        etapa: get(['etapa']),
+        nome: nomeCompleto || 'Sem Nome',
+        uc: get(['instalação', 'instalacao', 'uc']),
+        medidor: get(['nº de série', 'nº de serie', 'medidor']),
+        rua: get(['rua', 'endereço']),
+        numero: get(['número', 'numero']),
+        bairro: get(['bairro', 'municipio']),
+        lat: temGps ? lat : 0,
+        lng: temGps ? lng : 0,
+        temGps: temGps,
+        status: get(['status leitura', 'descrição nota de leitura']) || 'Pendente'
+      };
+    }).filter(r => r.uc); // Só mantém se tiver UC
+
+    salvarNoLocalStorage();
+    filtrarDados();
+    alert(`${baseDados.length} registros importados com sucesso!`);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function filtrarDados() {
+  const termoHome = document.getElementById('search-input').value.toLowerCase();
+  const termoMap = document.getElementById('search-map').value.toLowerCase();
+  const termo = termoHome || termoMap;
+
+  if (termo) {
+    dadosFiltrados = baseDados.filter(r => 
+      r.nome.toLowerCase().includes(termo) || 
+      r.uc.includes(termo) || 
+      r.medidor.includes(termo) || 
+      r.rua.toLowerCase().includes(termo)
+    );
+  } else {
+    dadosFiltrados = [...baseDados];
+  }
+
+  atualizarDashboard();
+  atualizarMapa();
+}
+
+// ==================== DASHBOARD ====================
+function atualizarDashboard() {
+  const total = baseDados.length;
+  
+  // Considera concluído se a nota de leitura for algo normal ou se o status for diferente de vazio
+  const concluidas = baseDados.filter(r => r.status && !r.status.includes('Pendente')).length;
+  const pendentes = total - concluidas;
+  const gpsZerado = baseDados.filter(r => !r.temGps).length;
+
+  document.getElementById('stat-total').innerText = total;
+  document.getElementById('stat-concluidas').innerText = concluidas;
+  document.getElementById('stat-pendentes').innerText = pendentes;
+  
+  const porcentagem = total > 0 ? Math.round((concluidas / total) * 100) : 0;
+  document.getElementById('stat-porcentagem').innerText = `${porcentagem}%`;
+  document.getElementById('progress-bar-fill').style.width = `${porcentagem}%`;
+  document.getElementById('prog-concluidas').innerText = `${concluidas} concluídas`;
+  document.getElementById('prog-restantes').innerText = `${pendentes} restantes`;
+
+  document.getElementById('base-registros').innerText = `${total} registros carregados`;
+  document.getElementById('user-info').innerText = `Operação - ${baseDados[0]?.regional || 'Sem Regional'}`;
+
+  // Alerta de GPS Zero
+  if (gpsZerado > 0) {
+    document.getElementById('alerta-gps').style.display = 'block';
+    document.getElementById('qtd-gps-zero').innerText = gpsZerado;
+  } else {
+    document.getElementById('alerta-gps').style.display = 'none';
+  }
 }
 
 // ==================== MAPA ====================
-function mudarTab(tab) {
-  document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab' + tab[0].toUpperCase() + tab.slice(1)).classList.add('active');
-  document.getElementById('cardGps').classList.toggle('hidden', tab !== 'captura');
-  document.getElementById('cardMapa').classList.toggle('hidden', tab !== 'mapa');
-  document.getElementById('cardLista').classList.toggle('hidden', tab !== 'lista');
-  if (tab === 'mapa') setTimeout(initMapa, 100);
-}
-
 function initMapa() {
-  if (mapa) { renderMapa(); return; }
-  // Centraliza o mapa em Santa Catarina como padrão
-  mapa = L.map('mapa').setView([-27.01, -48.63], 14); 
+  mapa = L.map('map').setView([-27.0, -48.6], 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap', maxZoom: 19
+    attribution: '© OpenStreetMap'
   }).addTo(mapa);
-  renderMapa();
-}
-
-function renderMapa() {
-  if (!mapa) return;
-  if (camadaMarcadores) mapa.removeLayer(camadaMarcadores);
   camadaMarcadores = L.layerGroup().addTo(mapa);
-  const pontos = [];
+  atualizarMapa();
+}
+
+function atualizarMapa() {
+  if (!mapa) return;
+  camadaMarcadores.clearLayers();
   
-  base.forEach(uc => {
-    if (!uc.lat || !uc.lng) return;
-    const cor = uc.status === 'validada' ? '#16a34a' : uc.status === 'fora' ? '#dc2626' : '#f59e0b';
-    const marker = L.circleMarker([parseFloat(uc.lat), parseFloat(uc.lng)], {
-      radius: 7, color: '#fff', weight: 2, fillColor: cor, fillOpacity: 1
-    }).bindPopup(`<b>UC ${uc.uc}</b><br>${uc.cliente}<br>${uc.endereco}, ${uc.numero}<br>Lat: ${uc.lat}<br>Lng: ${uc.lng}<br>Status: ${uc.status}`);
+  const pontosValidos = [];
+
+  dadosFiltrados.forEach(item => {
+    if (!item.temGps) return; // Pula quem não tem GPS
+
+    const cor = item.status.includes('Pendente') ? '#dc2626' : '#16a34a';
+    
+    const marker = L.circleMarker([item.lat, item.lng], {
+      radius: 8,
+      color: '#fff',
+      weight: 2,
+      fillColor: cor,
+      fillOpacity: 1
+    });
+
+    marker.on('click', () => {
+      exibirDetalhesPonto(item, marker);
+    });
+
     camadaMarcadores.addLayer(marker);
-    pontos.push([parseFloat(uc.lat), parseFloat(uc.lng)]);
+    pontosValidos.push([item.lat, item.lng]);
   });
+
+  if (pontosValidos.length > 0 && !marcadorSelecionado) {
+    mapa.fitBounds(pontosValidos, { padding: [30, 30] });
+  }
+}
+
+function exibirDetalhesPonto(item, marker) {
+  // Destaca o marcador
+  if (marcadorSelecionado) {
+    marcadorSelecionado.setStyle({ fillColor: marcadorSelecionado.options.originalColor, radius: 8 });
+  }
+  marker.options.originalColor = marker.options.fillColor;
+  marker.setStyle({ fillColor: '#155eef', radius: 12 }); // Azul selecionado
+  marcadorSelecionado = marker;
+
+  // Preenche o painel
+  document.getElementById('point-details').classList.remove('hidden');
+  document.getElementById('pd-title').innerHTML = `Ponto Selecionado · Etapa ${item.etapa} <span class="${item.status.includes('Pendente') ? 'badge-red' : 'badge-green'}">${item.status}</span>`;
+  document.getElementById('pd-nome').innerText = item.nome;
+  document.getElementById('pd-uc').innerText = item.uc;
+  document.getElementById('pd-medidor').innerText = item.medidor;
+  document.getElementById('pd-endereco').innerText = `${item.rua}, ${item.numero}`;
+  document.getElementById('pd-coord').innerText = `${item.lat}, ${item.lng}`;
+}
+
+// ==================== VOZ ====================
+function toggleVoz() {
+  if (!reconhecimentoVoz) {
+    alert('Seu navegador não suporta busca por voz.');
+    return;
+  }
+
+  const btn = document.getElementById('btn-mic');
+  if (btn.classList.contains('listening')) {
+    reconhecimentoVoz.stop();
+    btn.classList.remove('listening');
+  } else {
+    btn.classList.add('listening');
+    reconhecimentoVoz.start();
+  }
+}
+
+// ==================== BASE DE DADOS AÇÕES ====================
+function exportarExcel() {
+  if (baseDados.length === 0) return alert('Não há dados para exportar.');
   
-  if (pontos.length) mapa.fitBounds(pontos, { padding: [30, 30] });
-}
-
-// ==================== EXPORTAÇÃO ====================
-function prepararLinhas(filtro = null) {
-  const src = filtro ? base.filter(filtro) : base;
-  return src.map(u => ({
-    'UC/Instalação': u.uc,
-    'Nº de série': u.serie,
-    'Regional': u.regional,
-    'Cliente': u.cliente,
-    'Endereço': u.endereco,
-    'Número': u.numero,
-    'Bairro': u.bairro,
-    'Latitude': u.lat,
-    'Longitude': u.lng,
-    'Precisão (m)': u.precisao,
-    'Data/Hora': u.data,
-    'Leitor': u.leitor,
-    'Status': u.status,
-    'Foto': u.foto ? 'SIM' : 'NÃO'
-  }));
-}
-
-function exportarCSV() {
-  const rows = prepararLinhas();
-  if (!rows.length) return alert('Nada para exportar.');
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const csv = XLSX.utils.sheet_to_csv(ws);
-  baixar(new Blob([csv], { type: 'text/csv;charset=utf-8;' }), `coordenadas_${dataArquivo()}.csv`);
-}
-
-function exportarXLSX() {
-  const rows = prepararLinhas();
-  if (!rows.length) return alert('Nada para exportar.');
-  const ws = XLSX.utils.json_to_sheet(rows);
+  const ws = XLSX.utils.json_to_sheet(baseDados);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Coordenadas');
-  XLSX.writeFile(wb, `coordenadas_${dataArquivo()}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, ws, "Leituras");
+  XLSX.writeFile(wb, "Base_Atualizada_Leitura.xlsx");
 }
 
-function exportarXLSXLimpo() {
-  const rows = prepararLinhas(u => u.status === 'validada' && u.lat);
-  if (!rows.length) return alert('Nenhuma UC validada ainda.');
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Validadas');
-  XLSX.writeFile(wb, `validadas_para_sap_${dataArquivo()}.xlsx`);
+function limparBase() {
+  if (confirm('Tem certeza que deseja apagar todos os dados do aplicativo? Você precisará importar a planilha novamente.')) {
+    baseDados = [];
+    dadosFiltrados = [];
+    localStorage.removeItem('baseLeituraApp_v4');
+    filtrarDados();
+    document.getElementById('search-input').value = '';
+    document.getElementById('search-map').value = '';
+    alert('Base limpa com sucesso.');
+  }
 }
-
-function baixar(blob, nome) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = nome;
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-function dataArquivo() {
-  const d = new Date();
-  return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`;
-}
-
-// ==================== INICIAR ====================
-carregar();
 </script>
 </body>
 </html>
