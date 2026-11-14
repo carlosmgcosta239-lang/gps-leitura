@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#f0f4f8">
-<title>Leitura em Campo</title>
+<title>MAPS.OP</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -28,7 +28,9 @@
   .logo-icon { width: 40px; height: 40px; background: var(--primary); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; }
   .logo-text h1 { font-size: 16px; font-weight: 700; }
   .logo-text p { font-size: 12px; color: var(--text-light); }
-  .avatar { width: 36px; height: 36px; background: #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; color: var(--primary); }
+  
+  /* Logo Afernandes */
+  .logo-afernandes { height: 40px; max-width: 120px; object-fit: contain; }
 
   /* Telas */
   .screen { display: none; padding: 0 16px; animation: fadeIn 0.3s ease; }
@@ -59,11 +61,20 @@
   .stat-box.done .val { color: var(--green); }
   .stat-box.pend .val { color: var(--red); }
   
-  .progress-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 8px; }
-  .progress-fill { height: 100%; background: var(--green); transition: width 0.5s; }
+  /* Novo Card de Tempo */
+  .time-card { display: flex; justify-content: space-between; align-items: center; }
+  .time-card .info h3 { font-size: 14px; font-weight: 700; }
+  .time-card .info p { font-size: 12px; color: var(--text-light); }
+  .time-card .tempo-total { font-size: 24px; font-weight: 800; color: var(--primary); text-align: right; }
+  
+  /* Lista de Status */
+  .status-list { list-style: none; }
+  .status-list li { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .status-list li:last-child { border-bottom: none; }
+  .status-list li span.qtd { font-weight: 700; background: var(--bg); padding: 2px 8px; border-radius: 10px; }
   
   /* Mapa */
-  #map { height: 400px; border-radius: 12px; z-index: 1; margin-bottom: 12px; transition: filter 0.3s; }
+  #map { height: 350px; border-radius: 12px; z-index: 1; margin-bottom: 12px; transition: filter 0.3s; }
   .dark-map .leaflet-layer { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
   
   /* Painel do Ponto */
@@ -110,16 +121,17 @@
   <div class="logo-area">
     <div class="logo-icon">⚡</div>
     <div class="logo-text">
-      <h1>LEITURA EM CAMPO</h1>
+      <h1>MAPS.OP</h1>
       <p id="user-info">Operação - Carregando...</p>
     </div>
   </div>
-  <div class="avatar">OP</div>
+  <!-- Logo Afernandes apontando para o arquivo que você subiu -->
+  <img src="logo.png" alt="Afernandes" class="logo-afernandes">
 </header>
 
 <div id="screen-home" class="screen active">
   <div class="welcome">
-    <h2>Bom dia, Supervisor</h2>
+    <h2>Bom dia, Colaborador</h2>
     <p id="filtro-atual">Nenhuma base carregada</p>
   </div>
 
@@ -144,17 +156,19 @@
     </div>
   </div>
 
+  <div class="card time-card">
+    <div class="info">
+      <h3>Tempo Total Gasto</h3>
+      <p>Soma do tempo desta seleção</p>
+    </div>
+    <div class="tempo-total" id="stat-tempo">00:00:00</div>
+  </div>
+
   <div class="card">
-    <div class="card-title">
-      Progresso da Etapa <span id="stat-porcentagem" style="color: var(--green)">0%</span>
-    </div>
-    <div class="progress-bar">
-      <div class="progress-fill" id="progress-bar-fill" style="width: 0%"></div>
-    </div>
-    <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--text-light)">
-      <span id="prog-concluidas">0 concluídas</span>
-      <span id="prog-restantes">0 restantes</span>
-    </div>
+    <div class="card-title">Resumo das Leituras (Nota)</div>
+    <ul class="status-list" id="lista-status">
+      <!-- Preenchido via JS -->
+    </ul>
   </div>
 
   <div class="card" id="alerta-gps" style="display: none; background: #fffbeb; border-color: #fcd34d;">
@@ -298,7 +312,7 @@ function mudarTela(tela, el) {
 }
 
 function carregarDoLocalStorage() {
-  const saved = localStorage.getItem('baseLeituraApp_v6');
+  const saved = localStorage.getItem('baseLeituraApp_v7');
   if (saved) {
     baseDados = JSON.parse(saved);
     filtrarDados();
@@ -307,7 +321,7 @@ function carregarDoLocalStorage() {
 
 function salvarNoLocalStorage() {
   try {
-    localStorage.setItem('baseLeituraApp_v6', JSON.stringify(baseDados));
+    localStorage.setItem('baseLeituraApp_v7', JSON.stringify(baseDados));
   } catch (e) { }
 }
 
@@ -342,6 +356,8 @@ function importarExcel(event) {
       const lng = parseFloat(lngStr);
       const temGps = (lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng));
 
+      let tempoStr = get(['tempo executado', 'hora da leitura']);
+      
       return {
         regional: get(['regional', 'livro']),
         etapa: get(['etapa']),
@@ -355,7 +371,8 @@ function importarExcel(event) {
         lat: temGps ? lat : 0,
         lng: temGps ? lng : 0,
         temGps: temGps,
-        status: get(['status leitura', 'descrição nota de leitura']) || 'Pendente'
+        status: get(['status leitura', 'descrição nota de leitura', 'descricao nota de leitura']) || 'LEITURA NORMAL',
+        tempoStr: tempoStr
       };
     }).filter(r => r.uc);
 
@@ -399,19 +416,70 @@ function filtrarDados() {
 
 function atualizarDashboard(termo = '') {
   const total = dadosFiltrados.length;
-  const concluidas = dadosFiltrados.filter(r => r.status && !r.status.includes('Pendente') && r.status !== '000').length;
+  
+  let segundosTotais = 0;
+  dadosFiltrados.forEach(r => {
+    if (r.tempoStr && r.tempoStr.includes(':')) {
+      const partes = r.tempoStr.split(':');
+      if (partes.length >= 2) {
+        const h = parseInt(partes[0]) || 0;
+        const m = parseInt(partes[1]) || 0;
+        const s = parseInt(partes[2]) || 0;
+        segundosTotais += (h * 3600) + (m * 60) + s;
+      }
+    }
+  });
+  
+  const hTotal = Math.floor(segundosTotais / 3600).toString().padStart(2, '0');
+  const mTotal = Math.floor((segundosTotais % 3600) / 60).toString().padStart(2, '0');
+  const sTotal = (segundosTotais % 60).toString().padStart(2, '0');
+  document.getElementById('stat-tempo').innerText = `${hTotal}:${mTotal}:${sTotal}`;
+
+  const contagemStatus = {};
+  const statusBase = [
+    'LEITURA NORMAL', 
+    'CASA DEMOLIDA/INCENDIO', 
+    'LEITURA CONFIRMADA SEM INSPEÇÃO', 
+    'LEITURA CONFIRMADA COM TROCA DE MEDIDOR', 
+    'SEM LEITURA. NECESSÁRIA INSPEÇÃO TÉCNICA', 
+    'UC SEM MEDIDOR', 
+    'IMPEDIMENTO DE ACESSO DO CLIENTE'
+  ];
+  
+  statusBase.forEach(s => contagemStatus[s] = 0);
+
+  dadosFiltrados.forEach(r => {
+    let st = r.status.toUpperCase();
+    if (st.includes('NORMAL')) st = 'LEITURA NORMAL';
+    else if (st.includes('DEMOLIDA') || st.includes('INCENDIO')) st = 'CASA DEMOLIDA/INCENDIO';
+    else if (st.includes('SEM INSPEÇÃO') && !st.includes('NECESSÁRIA')) st = 'LEITURA CONFIRMADA SEM INSPEÇÃO';
+    else if (st.includes('TROCA DE MEDIDOR')) st = 'LEITURA CONFIRMADA COM TROCA DE MEDIDOR';
+    else if (st.includes('NECESSÁRIA') || st.includes('INSPEÇÃO TÉCNICA')) st = 'SEM LEITURA. NECESSÁRIA INSPEÇÃO TÉCNICA';
+    else if (st.includes('UC SEM MEDIDOR')) st = 'UC SEM MEDIDOR';
+    else if (st.includes('IMPEDIMENTO') || st.includes('ACESSO DO CLIENTE')) st = 'IMPEDIMENTO DE ACESSO DO CLIENTE';
+    
+    if (contagemStatus[st] !== undefined) {
+      contagemStatus[st]++;
+    } else {
+      contagemStatus[st] = (contagemStatus[st] || 0) + 1;
+    }
+  });
+
+  const ul = document.getElementById('lista-status');
+  ul.innerHTML = '';
+  Object.keys(contagemStatus).forEach(st => {
+    if (contagemStatus[st] > 0 || statusBase.includes(st)) {
+      ul.innerHTML += `<li><span>${st}</span><span class="qtd">${contagemStatus[st]}</span></li>`;
+    }
+  });
+
+  const concluidas = dadosFiltrados.filter(r => r.status && !r.status.includes('Pendente') && r.status !== '000' && r.status !== '').length;
   const pendentes = total - concluidas;
   const gpsZerado = dadosFiltrados.filter(r => !r.temGps).length;
 
   document.getElementById('stat-total').innerText = total;
   document.getElementById('stat-concluidas').innerText = concluidas;
   document.getElementById('stat-pendentes').innerText = pendentes;
-  
-  const porcentagem = total > 0 ? Math.round((concluidas / total) * 100) : 0;
-  document.getElementById('stat-porcentagem').innerText = `${porcentagem}%`;
-  document.getElementById('progress-bar-fill').style.width = `${porcentagem}%`;
-  document.getElementById('prog-concluidas').innerText = `${concluidas} concluídas`;
-  document.getElementById('prog-restantes').innerText = `${pendentes} restantes`;
   document.getElementById('base-registros').innerText = `${baseDados.length} registros na base`;
   
   if (termo) {
@@ -428,7 +496,6 @@ function atualizarDashboard(termo = '') {
   }
 }
 
-// ==================== MAPA ====================
 function initMapa() {
   mapa = L.map('map', {
     zoomControl: true,
@@ -510,43 +577,4 @@ function exibirDetalhesPonto(item, marker) {
   document.getElementById('pd-leiturista').innerText = item.leiturista || 'Não informado';
 
   document.getElementById('route-actions').style.display = 'grid';
-  document.getElementById('link-gmaps').href = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-  document.getElementById('link-waze').href = `https://waze.com/ul?ll=${item.lat},${item.lng}&navigate=yes`;
-}
-
-function toggleVoz() {
-  if (!reconhecimentoVoz) {
-    alert('Seu navegador não suporta busca por voz.');
-    return;
-  }
-  const btn = document.getElementById('btn-mic');
-  if (btn.classList.contains('listening')) {
-    reconhecimentoVoz.stop();
-    btn.classList.remove('listening');
-  } else {
-    btn.classList.add('listening');
-    reconhecimentoVoz.start();
-  }
-}
-
-function exportarExcel() {
-  if (baseDados.length === 0) return alert('Não há dados para exportar.');
-  const ws = XLSX.utils.json_to_sheet(baseDados);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Leituras");
-  XLSX.writeFile(wb, "Base_Atualizada_Leitura.xlsx");
-}
-
-function limparBase() {
-  if (confirm('Tem certeza que deseja apagar todos os dados do aplicativo?')) {
-    baseDados = []; dadosFiltrados = [];
-    localStorage.removeItem('baseLeituraApp_v6');
-    filtrarDados();
-    document.getElementById('search-input').value = '';
-    document.getElementById('search-map').value = '';
-    alert('Base limpa com sucesso.');
-  }
-}
-</script>
-</body>
-</html>
+  document.getElementById('link-gmaps').href = `https://www.google.com/maps/dir/?api=
