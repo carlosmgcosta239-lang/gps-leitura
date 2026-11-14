@@ -119,7 +119,7 @@
   </div>
 
   <div class="search-bar">
-    <input type="text" id="search-input" class="search-input" placeholder="Buscar UC, medidor, nome..." onkeypress="if(event.key === 'Enter') filtrarDados()">
+    <input type="text" id="search-input" class="search-input" placeholder="Buscar UC, medidor, nome, leiturista..." onkeypress="if(event.key === 'Enter') filtrarDados()">
     <button class="btn-search" onclick="filtrarDados()">🔍</button>
     <button class="btn-voice" id="btn-mic" onclick="toggleVoz()">🎤</button>
   </div>
@@ -175,6 +175,7 @@
       <div class="item"><span>UC / Instalação</span><b id="pd-uc">-</b></div>
       <div class="item"><span>Medidor</span><b id="pd-medidor">-</b></div>
       <div class="item"><span>Endereço</span><b id="pd-endereco">-</b></div>
+      <div class="item" style="grid-column: span 2"><span>Leiturista</span><b id="pd-leiturista">-</b></div>
       <div class="item" style="grid-column: span 2"><span>Coordenada</span><b id="pd-coord">-</b></div>
     </div>
   </div>
@@ -207,6 +208,7 @@
       <span class="badge-gray">Nº de série</span>
       <span class="badge-gray">Nome do consumidor</span>
       <span class="badge-gray">Rua</span>
+      <span class="badge-gray">Leiturista</span>
       <span class="badge-gray">Latitude</span>
       <span class="badge-gray">Longitude</span>
     </div>
@@ -253,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     reconhecimentoVoz.onresult = (event) => {
       let texto = event.results[0][0].transcript;
-      texto = texto.replace(/-/g, ''); // Limpa hífens
+      texto = texto.replace(/-/g, '');
 
       document.getElementById('search-input').value = texto;
       document.getElementById('search-map').value = texto;
@@ -295,7 +297,7 @@ function mudarTela(tela, el) {
 
 // ==================== LÓGICA DE DADOS ====================
 function carregarDoLocalStorage() {
-  const saved = localStorage.getItem('baseLeituraApp_v5');
+  const saved = localStorage.getItem('baseLeituraApp_v6');
   if (saved) {
     baseDados = JSON.parse(saved);
     filtrarDados();
@@ -304,7 +306,7 @@ function carregarDoLocalStorage() {
 
 function salvarNoLocalStorage() {
   try {
-    localStorage.setItem('baseLeituraApp_v5', JSON.stringify(baseDados));
+    localStorage.setItem('baseLeituraApp_v6', JSON.stringify(baseDados));
   } catch (e) {
     console.warn('Armazenamento cheio, mas os dados estão na memória.');
   }
@@ -351,6 +353,7 @@ function importarExcel(event) {
         rua: get(['rua', 'endereço']),
         numero: get(['número', 'numero']),
         bairro: get(['bairro', 'municipio']),
+        leiturista: get(['nome do usuario', 'nome do usuário', 'leiturista', 'equipe']), // NOVO CAMPO
         lat: temGps ? lat : 0,
         lng: temGps ? lng : 0,
         temGps: temGps,
@@ -375,7 +378,6 @@ function filtrarDados() {
   const termo = termoHome || termoMap;
 
   if (termo) {
-    // Remove hifens e espaços do termo buscado para bater com a base
     const termoLimpo = termo.replace(/[-\s]/g, '');
 
     dadosFiltrados = baseDados.filter(r => {
@@ -383,13 +385,13 @@ function filtrarDados() {
       const medidorLimpo = r.medidor.replace(/[-\s]/g, '');
       const regionalLimpa = r.regional.toLowerCase().replace(/[-\s]/g, '');
       
-      // Agora busca em TODOS os campos importantes, incluindo Regional e Rua
       return r.nome.toLowerCase().includes(termo) || 
              ucLimpa.includes(termoLimpo) || 
              medidorLimpo.includes(termoLimpo) || 
              r.rua.toLowerCase().includes(termo) ||
              regionalLimpa.includes(termoLimpo) || 
-             r.etapa.toLowerCase().includes(termo);
+             r.etapa.toLowerCase().includes(termo) ||
+             r.leiturista.toLowerCase().includes(termo); // NOVA BUSCA NO FILTRO
     });
   } else {
     dadosFiltrados = [...baseDados];
@@ -448,7 +450,6 @@ function atualizarMapa(termo = '') {
   
   const pontosValidos = [];
   
-  // Limpa o painel de detalhes ao fazer uma nova busca
   document.getElementById('point-details').classList.add('hidden');
   if (marcadorSelecionado) marcadorSelecionado = null;
 
@@ -469,7 +470,6 @@ function atualizarMapa(termo = '') {
     pontosValidos.push([item.lat, item.lng]);
   });
 
-  // AQUI ESTÁ O SEGREDO PARA DAR ZOOM EM TODOS OS PONTOS DA RUA/LIVRO
   if (pontosValidos.length > 0) {
     mapa.fitBounds(pontosValidos, { padding: [40, 40] });
   }
@@ -495,6 +495,7 @@ function exibirDetalhesPonto(item, marker) {
   document.getElementById('pd-uc').innerText = item.uc;
   document.getElementById('pd-medidor').innerText = item.medidor;
   document.getElementById('pd-endereco').innerText = `${item.rua}, ${item.numero}`;
+  document.getElementById('pd-leiturista').innerText = item.leiturista || 'Não informado'; // EXIBE O LEITURISTA NO CARD
   document.getElementById('pd-coord').innerText = `${item.lat}, ${item.lng}`;
 }
 
@@ -529,7 +530,7 @@ function limparBase() {
   if (confirm('Tem certeza que deseja apagar todos os dados do aplicativo?')) {
     baseDados = [];
     dadosFiltrados = [];
-    localStorage.removeItem('baseLeituraApp_v5');
+    localStorage.removeItem('baseLeituraApp_v6');
     filtrarDados();
     document.getElementById('search-input').value = '';
     document.getElementById('search-map').value = '';
