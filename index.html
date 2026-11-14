@@ -64,6 +64,12 @@
   .status-list li:last-child { border-bottom: none; }
   .status-list li span.qtd { font-weight: 700; background: var(--bg); padding: 2px 8px; border-radius: 10px; }
   
+  /* Card de Alerta UC Não Localizada */
+  .alert-uc { background: #fef2f2; border: 2px solid #fca5a5; border-radius: 16px; padding: 16px; margin-bottom: 16px; display: none; align-items: center; justify-content: space-between; }
+  .alert-uc .text h4 { color: #991b1b; font-size: 14px; font-weight: 700; }
+  .alert-uc .text p { color: #b91c1c; font-size: 12px; margin-top: 4px; }
+  .alert-uc .qtd-badge { background: #dc2626; color: white; font-size: 24px; font-weight: 800; padding: 8px 16px; border-radius: 12px; }
+
   #map { height: 350px; border-radius: 12px; z-index: 1; margin-bottom: 12px; transition: filter 0.3s; }
   .dark-map .leaflet-layer { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
   
@@ -110,7 +116,6 @@
       <p id="user-info">Operação - Carregando...</p>
     </div>
   </div>
-  <!-- Logo Afernandes -->
   <img src="logo.png" alt="Afernandes" class="logo-afernandes" onerror="this.style.display='none'">
 </header>
 
@@ -170,6 +175,15 @@
   </div>
   
   <div id="map"></div>
+
+  <!-- NOVO ALERTA DE UC NÃO LOCALIZADA -->
+  <div class="alert-uc" id="alert-uc-nao-localizada">
+    <div class="text">
+      <h4>🚨 Alerta de Qualidade</h4>
+      <p>Uso indevido: UC Não Localizada</p>
+    </div>
+    <div class="qtd-badge" id="qtd-uc-nao-localizada">0</div>
+  </div>
   
   <div id="point-details" class="point-panel hidden">
     <h3 id="pd-title">Ponto Selecionado <span id="pd-status" class="badge-gray">Pendente</span></h3>
@@ -296,7 +310,7 @@ function mudarTela(tela, el) {
 }
 
 function carregarDoLocalStorage() {
-  const saved = localStorage.getItem('baseLeituraApp_v8');
+  const saved = localStorage.getItem('baseLeituraApp_v9');
   if (saved) {
     baseDados = JSON.parse(saved);
     filtrarDados();
@@ -305,11 +319,10 @@ function carregarDoLocalStorage() {
 
 function salvarNoLocalStorage() {
   try {
-    localStorage.setItem('baseLeituraApp_v8', JSON.stringify(baseDados));
+    localStorage.setItem('baseLeituraApp_v9', JSON.stringify(baseDados));
   } catch (e) { }
 }
 
-// CONVERSOR DE TEMPO ROBUSTO
 function converterTempoParaSegundos(tempoStr) {
   if (!tempoStr) return 0;
   tempoStr = String(tempoStr).trim();
@@ -322,9 +335,8 @@ function converterTempoParaSegundos(tempoStr) {
       return (h * 3600) + (m * 60) + s;
     }
   } else if (tempoStr.includes('.')) {
-    // Formato decimal (ex: 0.5 = meio dia)
     const dias = parseFloat(tempoStr) || 0;
-    return Math.round(dias * 86400); // 86400 segundos em um dia
+    return Math.round(dias * 86400);
   }
   return 0;
 }
@@ -338,7 +350,7 @@ function importarExcel(event) {
     const data = new Uint8Array(e.target.result);
     const workbook = XLSX.read(data, { type: 'array' });
     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '', raw: false }); // raw: false garante que datas venham como string
+    const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '', raw: false });
 
     baseDados = rows.map(row => {
       const get = (keys) => {
@@ -360,7 +372,6 @@ function importarExcel(event) {
       const lng = parseFloat(lngStr);
       const temGps = (lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng));
 
-      // Pega prioritariamente o "Tempo Executado". Se não tiver, tenta "Hora da leitura"
       let tempoStr = get(['tempo executado']);
       if (!tempoStr) tempoStr = get(['hora da leitura']);
       
@@ -423,7 +434,6 @@ function filtrarDados() {
 function atualizarDashboard(termo = '') {
   const total = dadosFiltrados.length;
   
-  // SOMA DO TEMPO TOTAL
   let segundosTotais = 0;
   dadosFiltrados.forEach(r => {
     segundosTotais += converterTempoParaSegundos(r.tempoStr);
@@ -434,7 +444,6 @@ function atualizarDashboard(termo = '') {
   const sTotal = (segundosTotais % 60).toString().padStart(2, '0');
   document.getElementById('stat-tempo').innerText = `${hTotal}:${mTotal}:${sTotal}`;
 
-  // CONTAGEM DE STATUS
   const contagemStatus = {};
   const statusBase = [
     'LEITURA NORMAL', 
@@ -443,7 +452,8 @@ function atualizarDashboard(termo = '') {
     'LEITURA CONFIRMADA COM TROCA DE MEDIDOR', 
     'SEM LEITURA. NECESSÁRIA INSPEÇÃO TÉCNICA', 
     'UC SEM MEDIDOR', 
-    'IMPEDIMENTO DE ACESSO DO CLIENTE'
+    'IMPEDIMENTO DE ACESSO DO CLIENTE',
+    'UC NAO LOCALIZADA' // Adicionado no resumo
   ];
   
   statusBase.forEach(s => contagemStatus[s] = 0);
@@ -457,6 +467,7 @@ function atualizarDashboard(termo = '') {
     else if (st.includes('NECESSÁRIA') || st.includes('INSPEÇÃO TÉCNICA')) st = 'SEM LEITURA. NECESSÁRIA INSPEÇÃO TÉCNICA';
     else if (st.includes('UC SEM MEDIDOR')) st = 'UC SEM MEDIDOR';
     else if (st.includes('IMPEDIMENTO') || st.includes('ACESSO DO CLIENTE')) st = 'IMPEDIMENTO DE ACESSO DO CLIENTE';
+    else if (st.includes('NAO LOCALIZADA') || st.includes('NÃO LOCALIZADA')) st = 'UC NAO LOCALIZADA';
     
     if (contagemStatus[st] !== undefined) {
       contagemStatus[st]++;
@@ -469,7 +480,10 @@ function atualizarDashboard(termo = '') {
   ul.innerHTML = '';
   Object.keys(contagemStatus).forEach(st => {
     if (contagemStatus[st] > 0 || statusBase.includes(st)) {
-      ul.innerHTML += `<li><span>${st}</span><span class="qtd">${contagemStatus[st]}</span></li>`;
+      // Se for não localizada, destaca em vermelho no resumo
+      const isAlerta = st === 'UC NAO LOCALIZADA';
+      const corStyle = isAlerta ? 'color: #dc2626; font-weight: bold;' : '';
+      ul.innerHTML += `<li style="${corStyle}"><span>${st}</span><span class="qtd" style="${isAlerta ? 'background: #fee2e2; color:#dc2626;' : ''}">${contagemStatus[st]}</span></li>`;
     }
   });
 
@@ -493,6 +507,15 @@ function atualizarDashboard(termo = '') {
     document.getElementById('qtd-gps-zero').innerText = gpsZerado;
   } else {
     document.getElementById('alerta-gps').style.display = 'none';
+  }
+
+  // Mostra o painel de Alerta na aba do Mapa
+  const qtdNaoLocalizada = contagemStatus['UC NAO LOCALIZADA'] || 0;
+  if (qtdNaoLocalizada > 0) {
+    document.getElementById('alert-uc-nao-localizada').style.display = 'flex';
+    document.getElementById('qtd-uc-nao-localizada').innerText = qtdNaoLocalizada;
+  } else {
+    document.getElementById('alert-uc-nao-localizada').style.display = 'none';
   }
 }
 
@@ -535,10 +558,18 @@ function atualizarMapa(termo = '') {
   dadosFiltrados.forEach(item => {
     if (!item.temGps) return;
 
-    const cor = (item.status && !item.status.includes('Pendente') && item.status !== '000') ? '#16a34a' : '#dc2626';
+    let cor = '#dc2626'; // Vermelho padrão (Pendente)
+    let raio = 8;
+    
+    if (item.status.toUpperCase().includes('NAO LOCALIZADA') || item.status.toUpperCase().includes('NÃO LOCALIZADA')) {
+      cor = '#7f1d1d'; // Vermelho Sangue (Alerta Crítico)
+      raio = 11; // Bolinha maior
+    } else if (item.status && !item.status.includes('Pendente') && item.status !== '000') {
+      cor = '#16a34a'; // Verde (Concluída)
+    }
     
     const marker = L.circleMarker([item.lat, item.lng], {
-      radius: 8, color: '#fff', weight: 2, fillColor: cor, fillOpacity: 1
+      radius: raio, color: '#fff', weight: 2, fillColor: cor, fillOpacity: 1
     });
 
     marker.on('click', () => {
@@ -556,7 +587,12 @@ function atualizarMapa(termo = '') {
 
 function exibirDetalhesPonto(item, marker) {
   if (marcadorSelecionado) {
-    const corAntiga = (marcadorSelecionado.item.status && !marcadorSelecionado.item.status.includes('Pendente') && marcadorSelecionado.item.status !== '000') ? '#16a34a' : '#dc2626';
+    let corAntiga = '#dc2626';
+    if (marcadorSelecionado.item.status.toUpperCase().includes('NAO LOCALIZADA') || marcadorSelecionado.item.status.toUpperCase().includes('NÃO LOCALIZADA')) {
+      corAntiga = '#7f1d1d';
+    } else if (marcadorSelecionado.item.status && !marcadorSelecionado.item.status.includes('Pendente') && marcadorSelecionado.item.status !== '000') {
+      corAntiga = '#16a34a';
+    }
     marcadorSelecionado.setStyle({ fillColor: corAntiga, radius: 8 });
   }
   
@@ -607,7 +643,7 @@ function exportarExcel() {
 function limparBase() {
   if (confirm('Tem certeza que deseja apagar todos os dados do aplicativo?')) {
     baseDados = []; dadosFiltrados = [];
-    localStorage.removeItem('baseLeituraApp_v8');
+    localStorage.removeItem('baseLeituraApp_v9');
     filtrarDados();
     document.getElementById('search-input').value = '';
     document.getElementById('search-map').value = '';
