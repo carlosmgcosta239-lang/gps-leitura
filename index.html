@@ -63,7 +63,8 @@
   .progress-fill { height: 100%; background: var(--green); transition: width 0.5s; }
   
   /* Mapa */
-  #map { height: 400px; border-radius: 12px; z-index: 1; margin-bottom: 12px; }
+  #map { height: 400px; border-radius: 12px; z-index: 1; margin-bottom: 12px; transition: filter 0.3s; }
+  .dark-map .leaflet-layer { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
   
   /* Painel do Ponto */
   .point-panel { background: var(--card); border-radius: 16px 16px 0 0; padding: 16px; box-shadow: 0 -4px 10px rgba(0,0,0,0.05); border: 1px solid var(--border); border-bottom: none; position: relative; }
@@ -182,7 +183,6 @@
       <div class="item" style="grid-column: span 2"><span>Leiturista</span><b id="pd-leiturista">-</b></div>
     </div>
     
-    <!-- BOTÕES DE NAVEGAÇÃO REAL -->
     <div class="route-buttons" id="route-actions" style="display: none;">
       <a href="#" id="link-gmaps" target="_blank" class="btn-route btn-gmaps">🗺️ Google Maps</a>
       <a href="#" id="link-waze" target="_blank" class="btn-route btn-waze">🧭 Waze</a>
@@ -248,7 +248,6 @@ let camadaMarcadores = null;
 let marcadorSelecionado = null;
 let reconhecimentoVoz = null;
 let mapTheme = 'light';
-let tileLayer = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   carregarDoLocalStorage();
@@ -429,32 +428,33 @@ function atualizarDashboard(termo = '') {
   }
 }
 
-// ==================== MAPA E NAVEGAÇÃO REAL ====================
+// ==================== MAPA ====================
 function initMapa() {
-  mapa = L.map('map').setView([-27.0, -48.6], 13);
-  atualizarCamadaMapa();
+  mapa = L.map('map', {
+    zoomControl: true,
+    attributionControl: false
+  }).setView([-27.0, -48.6], 13);
+  
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapa);
   camadaMarcadores = L.layerGroup().addTo(mapa);
   atualizarMapa();
 }
 
-function atualizarCamadaMapa() {
-  if (tileLayer) mapa.removeLayer(tileLayer);
+function toggleTemaMapa() {
+  const mapElement = document.getElementById('map');
+  const btn = document.getElementById('btn-theme');
   
   if (mapTheme === 'light') {
-    tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(mapa);
-    document.getElementById('btn-theme').innerText = '🌙';
-    document.getElementById('btn-theme').style.background = '#1e293b';
+    mapElement.classList.add('dark-map');
+    btn.innerText = '☀️';
+    btn.style.background = '#64748b';
+    mapTheme = 'dark';
   } else {
-    // Mapa Escuro via CartoDB Dark Matter (gratuito e sem chave de API)
-    tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap © CartoDB' }).addTo(mapa);
-    document.getElementById('btn-theme').innerText = '☀️';
-    document.getElementById('btn-theme').style.background = '#64748b';
+    mapElement.classList.remove('dark-map');
+    btn.innerText = '🌙';
+    btn.style.background = 'var(--text)';
+    mapTheme = 'light';
   }
-}
-
-function toggleTemaMapa() {
-  mapTheme = mapTheme === 'light' ? 'dark' : 'light';
-  if (mapa) atualizarCamadaMapa();
 }
 
 function atualizarMapa(termo = '') {
@@ -509,13 +509,8 @@ function exibirDetalhesPonto(item, marker) {
   document.getElementById('pd-endereco').innerText = `${item.rua}, ${item.numero}`;
   document.getElementById('pd-leiturista').innerText = item.leiturista || 'Não informado';
 
-  // CONFIGURA OS BOTÕES DE ROTA
   document.getElementById('route-actions').style.display = 'grid';
-  
-  // Link do Google Maps (Direções)
   document.getElementById('link-gmaps').href = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-  
-  // Link do Waze
   document.getElementById('link-waze').href = `https://waze.com/ul?ll=${item.lat},${item.lng}&navigate=yes`;
 }
 
