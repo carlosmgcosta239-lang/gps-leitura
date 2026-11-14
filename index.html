@@ -20,7 +20,6 @@
     --border: #e2e8f0;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
-  /* Correção do rodapé para o Netlify não sobrepor */
   body { background: var(--bg); color: var(--text); padding-bottom: 120px; }
   
   /* Header */
@@ -77,7 +76,7 @@
   .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
   .btn-danger { background: #fee2e2; color: var(--red); }
 
-  /* Menu Inferior Corrigido */
+  /* Menu Inferior */
   .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding-top: 10px; padding-bottom: 60px; z-index: 999; }
   .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-light); font-size: 11px; font-weight: 600; text-decoration: none; }
   .nav-item.active { color: var(--primary); }
@@ -245,7 +244,6 @@ let reconhecimentoVoz = null;
 document.addEventListener('DOMContentLoaded', () => {
   carregarDoLocalStorage();
   
-  // Configurar Voz
   if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     reconhecimentoVoz = new SpeechRecognition();
@@ -255,21 +253,17 @@ document.addEventListener('DOMContentLoaded', () => {
     
     reconhecimentoVoz.onresult = (event) => {
       let texto = event.results[0][0].transcript;
-      
-      // CORREÇÃO 1: Limpar números que a voz adiciona hífen (ex: 480655-03 vira 48065503)
-      texto = texto.replace(/-/g, '');
+      texto = texto.replace(/-/g, ''); // Limpa hífens
 
       document.getElementById('search-input').value = texto;
       document.getElementById('search-map').value = texto;
       
       filtrarDados();
       
-      // CORREÇÃO 2: Se buscou por voz, muda para a aba do mapa automaticamente
       if (texto.length > 0) {
         const navMapa = document.querySelectorAll('.nav-item')[1];
         mudarTela('mapa', navMapa);
       }
-
       document.getElementById('btn-mic').classList.remove('listening');
     };
     
@@ -367,7 +361,6 @@ function importarExcel(event) {
     salvarNoLocalStorage();
     filtrarDados();
     
-    // Limpa os campos de busca após importar
     document.getElementById('search-input').value = '';
     document.getElementById('search-map').value = '';
     
@@ -377,24 +370,25 @@ function importarExcel(event) {
 }
 
 function filtrarDados() {
-  // Pega o que foi digitado nas duas barras e converte para minúsculo
-  const termoHome = document.getElementById('search-input').value.toLowerCase();
-  const termoMap = document.getElementById('search-map').value.toLowerCase();
+  const termoHome = document.getElementById('search-input').value.toLowerCase().trim();
+  const termoMap = document.getElementById('search-map').value.toLowerCase().trim();
   const termo = termoHome || termoMap;
 
   if (termo) {
-    // Remove hifens e espaços do termo de busca para facilitar achar números
+    // Remove hifens e espaços do termo buscado para bater com a base
     const termoLimpo = termo.replace(/[-\s]/g, '');
 
     dadosFiltrados = baseDados.filter(r => {
       const ucLimpa = r.uc.replace(/[-\s]/g, '');
       const medidorLimpo = r.medidor.replace(/[-\s]/g, '');
+      const regionalLimpa = r.regional.toLowerCase().replace(/[-\s]/g, '');
       
+      // Agora busca em TODOS os campos importantes, incluindo Regional e Rua
       return r.nome.toLowerCase().includes(termo) || 
              ucLimpa.includes(termoLimpo) || 
              medidorLimpo.includes(termoLimpo) || 
              r.rua.toLowerCase().includes(termo) ||
-             r.regional.toLowerCase().includes(termo) || 
+             regionalLimpa.includes(termoLimpo) || 
              r.etapa.toLowerCase().includes(termo);
     });
   } else {
@@ -425,7 +419,7 @@ function atualizarDashboard(termo = '') {
   document.getElementById('base-registros').innerText = `${baseDados.length} registros na base`;
   
   if (termo) {
-    document.getElementById('filtro-atual').innerText = `Filtrando por: "${termo}"`;
+    document.getElementById('filtro-atual').innerText = `Filtrando por: "${termo}" (${total} resultados)`;
   } else {
     document.getElementById('filtro-atual').innerText = baseDados.length > 0 ? `Operação - ${baseDados[0]?.regional || 'Geral'}` : 'Nenhuma base carregada';
   }
@@ -453,7 +447,10 @@ function atualizarMapa(termo = '') {
   camadaMarcadores.clearLayers();
   
   const pontosValidos = [];
-  let pontoFocado = null;
+  
+  // Limpa o painel de detalhes ao fazer uma nova busca
+  document.getElementById('point-details').classList.add('hidden');
+  if (marcadorSelecionado) marcadorSelecionado = null;
 
   dadosFiltrados.forEach(item => {
     if (!item.temGps) return;
@@ -470,18 +467,11 @@ function atualizarMapa(termo = '') {
 
     camadaMarcadores.addLayer(marker);
     pontosValidos.push([item.lat, item.lng]);
-    
-    // Se for uma busca ativa e tiver só 1 resultado, foca nele
-    if (termo && dadosFiltrados.length === 1) {
-      pontoFocado = [item.lat, item.lng];
-      exibirDetalhesPonto(item, marker);
-    }
   });
 
-  if (pontoFocado) {
-    mapa.setView(pontoFocado, 17);
-  } else if (pontosValidos.length > 0 && !termo) {
-    mapa.fitBounds(pontosValidos, { padding: [30, 30] });
+  // AQUI ESTÁ O SEGREDO PARA DAR ZOOM EM TODOS OS PONTOS DA RUA/LIVRO
+  if (pontosValidos.length > 0) {
+    mapa.fitBounds(pontosValidos, { padding: [40, 40] });
   }
 }
 
@@ -491,7 +481,7 @@ function exibirDetalhesPonto(item, marker) {
     marcadorSelecionado.setStyle({ fillColor: corAntiga, radius: 8 });
   }
   
-  marker.item = item; // Salva referência
+  marker.item = item;
   marker.setStyle({ fillColor: '#155eef', radius: 12 });
   marcadorSelecionado = marker;
 
