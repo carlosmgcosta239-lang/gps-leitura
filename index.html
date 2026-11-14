@@ -569,4 +569,50 @@ function exibirDetalhesPonto(item, marker) {
   const badgeClass = isConcluida ? 'badge-green' : 'badge-red';
   
   document.getElementById('pd-title').innerHTML = `Ponto Selecionado · Etapa ${item.etapa} <span class="${badgeClass}">${item.status}</span>`;
-  document.getElementById('pd-nome
+  document.getElementById('pd-nome').innerText = item.nome;
+  document.getElementById('pd-uc').innerText = item.uc;
+  document.getElementById('pd-medidor').innerText = item.medidor;
+  document.getElementById('pd-endereco').innerText = `${item.rua}, ${item.numero}`;
+  document.getElementById('pd-leiturista').innerText = item.leiturista || 'Não informado';
+
+  document.getElementById('route-actions').style.display = 'grid';
+  document.getElementById('link-gmaps').href = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
+  document.getElementById('link-waze').href = `https://waze.com/ul?ll=${item.lat},${item.lng}&navigate=yes`;
+}
+
+function toggleVoz() {
+  if (!reconhecimentoVoz) {
+    alert('Seu navegador não suporta busca por voz.');
+    return;
+  }
+  const btn = document.getElementById('btn-mic');
+  if (btn.classList.contains('listening')) {
+    reconhecimentoVoz.stop();
+    btn.classList.remove('listening');
+  } else {
+    btn.classList.add('listening');
+    reconhecimentoVoz.start();
+  }
+}
+
+function exportarExcel() {
+  if (baseDados.length === 0) return alert('Não há dados para exportar.');
+  const ws = XLSX.utils.json_to_sheet(baseDados);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Leituras");
+  XLSX.writeFile(wb, "Base_Atualizada_Leitura.xlsx");
+}
+
+function limparBase() {
+  if (confirm('Tem certeza que deseja apagar todos os dados do aplicativo?')) {
+    baseDados = []; dadosFiltrados = [];
+    localStorage.removeItem('baseLeituraApp_v7');
+    filtrarDados();
+    document.getElementById('search-input').value = '';
+    document.getElementById('search-map').value = '';
+    alert('Base limpa com sucesso.');
+  }
+}
+</script>
+</body>
+</html>
