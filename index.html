@@ -55,10 +55,12 @@
   .stat-box.done .val { color: var(--green); }
   .stat-box.pend .val { color: var(--red); }
   
-  .time-card { display: flex; justify-content: space-between; align-items: center; }
-  .time-card .info h3 { font-size: 14px; font-weight: 700; }
-  .time-card .info p { font-size: 12px; color: var(--text-light); }
-  .time-card .tempo-total { font-size: 24px; font-weight: 800; color: var(--primary); text-align: right; }
+  /* Novo Card de Tempo e Pontualidade */
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .info-card { background: var(--card); border-radius: 12px; padding: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; justify-content: center; }
+  .info-card h3 { font-size: 12px; font-weight: 700; color: var(--text-light); margin-bottom: 4px; text-transform: uppercase; }
+  .info-card .val-principal { font-size: 20px; font-weight: 800; color: var(--primary); }
+  .info-card .sub { font-size: 11px; color: var(--text-light); margin-top: 4px; }
   
   .status-list { list-style: none; }
   .status-list li { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
@@ -155,22 +157,37 @@
     </div>
   </div>
 
-  <div class="card time-card">
-    <div class="info">
-      <h3>Tempo Total Gasto</h3>
-      <p>Soma do tempo desta seleção</p>
+  <!-- NOVOS CARDS DE TEMPO E PONTUALIDADE -->
+  <div class="info-grid">
+    <div class="info-card">
+      <h3>Tempo Total</h3>
+      <div class="val-principal" id="stat-tempo">00:00:00</div>
+      <div class="sub">Soma da seleção</div>
     </div>
-    <div class="tempo-total" id="stat-tempo">00:00:00</div>
+    <div class="info-card">
+      <h3>Pontualidade</h3>
+      <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px;">
+        <div>
+          <div class="val-principal" style="color: var(--green); font-size: 16px;" id="stat-dentro-prazo">0</div>
+          <div class="sub">Dentro</div>
+        </div>
+        <div style="text-align: right;">
+          <div class="val-principal" style="color: var(--red); font-size: 16px;" id="stat-fora-prazo">0</div>
+          <div class="sub">Fora</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOVO ALERTA DE GPS BASEADO NA COLUNA VALOR ZERO -->
+  <div class="card" id="alerta-gps" style="display: none; background: #fffbeb; border-color: #fcd34d;">
+    <div class="card-title" style="color: #92400e;">⚠️ Alerta de GPS (Valor Zero)</div>
+    <p style="font-size: 13px; color: #92400e;">Existem <b id="qtd-gps-zero">0</b> instalações marcadas com "Valor Zero" na planilha. Peça aos colaboradores para ativarem o GPS!</p>
   </div>
 
   <div class="card">
     <div class="card-title">Resumo das Leituras (Nota)</div>
     <ul class="status-list" id="lista-status"></ul>
-  </div>
-
-  <div class="card" id="alerta-gps" style="display: none; background: #fffbeb; border-color: #fcd34d;">
-    <div class="card-title" style="color: #92400e;">⚠️ Alerta de GPS</div>
-    <p style="font-size: 13px; color: #92400e;">Existem <b id="qtd-gps-zero">0</b> coordenadas com valor zero. Peça aos colaboradores para ativarem o GPS do celular!</p>
   </div>
 </div>
 
@@ -358,7 +375,7 @@ function mudarTela(tela, el) {
 }
 
 function carregarDoLocalStorage() {
-  const saved = localStorage.getItem('baseLeituraApp_v11');
+  const saved = localStorage.getItem('baseLeituraApp_v12');
   if (saved) {
     const parsed = JSON.parse(saved);
     baseDados = parsed.base || [];
@@ -369,14 +386,13 @@ function carregarDoLocalStorage() {
 
 function salvarNoLocalStorage() {
   try {
-    localStorage.setItem('baseLeituraApp_v11', JSON.stringify({
+    localStorage.setItem('baseLeituraApp_v12', JSON.stringify({
       base: baseDados,
       ocorrencias: ocorrenciasCampo
     }));
   } catch (e) { }
 }
 
-// CONVERSOR CORRIGIDO: Ignora a "hora do dia" e soma apenas a duração real da leitura
 function converterTempoParaSegundos(tempoStr) {
   if (!tempoStr) return 0;
   tempoStr = String(tempoStr).trim();
@@ -387,8 +403,7 @@ function converterTempoParaSegundos(tempoStr) {
       const m = parseInt(partes[1]) || 0;
       const s = parseInt(partes[2]) || 0;
       
-      // Se as horas forem maiores que 0, é porque o Excel está lendo a "Hora do dia" (ex: 08:26:46)
-      // e não a duração. Portanto, ignoramos as horas e somamos só min e seg.
+      // Corrige o erro da "hora do dia" do Excel
       if (h > 0) {
         h = 0;
       }
@@ -431,11 +446,20 @@ function importarExcel(event) {
 
       const lat = parseFloat(latStr);
       const lng = parseFloat(lngStr);
-      const temGps = (lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng));
+      
+      // Verifica o GPS pelas coordenadas, mas prioriza o aviso se a coluna VALOR ZERO for 1
+      let temGps = (lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng));
+      const valorZeroFlag = parseInt(get(['valor zero'])) || 0;
+      if (valorZeroFlag === 1) {
+        temGps = false; // Força a falha se a planilha disser que é zero
+      }
 
       let tempoStr = get(['tempo executado']);
       if (!tempoStr) tempoStr = get(['hora da leitura']);
       
+      // Lê a pontualidade da coluna V
+      const pontualidade = get(['pontualidade']) || 'Não informado';
+
       return {
         regional: get(['regional', 'livro']),
         etapa: get(['etapa']),
@@ -449,6 +473,7 @@ function importarExcel(event) {
         lat: temGps ? lat : 0,
         lng: temGps ? lng : 0,
         temGps: temGps,
+        pontualidade: pontualidade,
         status: get(['status leitura', 'descrição nota de leitura', 'descricao nota de leitura']) || 'LEITURA NORMAL',
         tempoStr: tempoStr
       };
@@ -496,14 +521,33 @@ function atualizarDashboard(termo = '') {
   const total = dadosFiltrados.length;
   
   let segundosTotais = 0;
+  let dentroPrazo = 0;
+  let foraPrazo = 0;
+  let gpsZerado = 0;
+
   dadosFiltrados.forEach(r => {
+    // Soma Tempo
     segundosTotais += converterTempoParaSegundos(r.tempoStr);
+
+    // Conta Pontualidade
+    if (r.pontualidade.toLowerCase().includes('dentro')) {
+      dentroPrazo++;
+    } else if (r.pontualidade.toLowerCase().includes('fora')) {
+      foraPrazo++;
+    }
+
+    // Conta GPS Zerado
+    if (!r.temGps) {
+      gpsZerado++;
+    }
   });
   
   const hTotal = Math.floor(segundosTotais / 3600).toString().padStart(2, '0');
   const mTotal = Math.floor((segundosTotais % 3600) / 60).toString().padStart(2, '0');
   const sTotal = (segundosTotais % 60).toString().padStart(2, '0');
   document.getElementById('stat-tempo').innerText = `${hTotal}:${mTotal}:${sTotal}`;
+  document.getElementById('stat-dentro-prazo').innerText = dentroPrazo;
+  document.getElementById('stat-fora-prazo').innerText = foraPrazo;
 
   const contagemStatus = {};
   const statusBase = [
@@ -549,7 +593,6 @@ function atualizarDashboard(termo = '') {
 
   const concluidas = dadosFiltrados.filter(r => r.status && !r.status.includes('Pendente') && r.status !== '000' && r.status !== '').length;
   const pendentes = total - concluidas;
-  const gpsZerado = dadosFiltrados.filter(r => !r.temGps).length;
 
   document.getElementById('stat-total').innerText = total;
   document.getElementById('stat-concluidas').innerText = concluidas;
@@ -562,6 +605,7 @@ function atualizarDashboard(termo = '') {
     document.getElementById('filtro-atual').innerText = baseDados.length > 0 ? `Operação - ${baseDados[0]?.regional || 'Geral'}` : 'Nenhuma base carregada';
   }
 
+  // Alerta de GPS
   if (gpsZerado > 0) {
     document.getElementById('alerta-gps').style.display = 'block';
     document.getElementById('qtd-gps-zero').innerText = gpsZerado;
@@ -789,7 +833,7 @@ function limparBase() {
     baseDados = []; 
     dadosFiltrados = [];
     ocorrenciasCampo = [];
-    localStorage.removeItem('baseLeituraApp_v11');
+    localStorage.removeItem('baseLeituraApp_v12');
     filtrarDados();
     document.getElementById('search-input').value = '';
     document.getElementById('search-map').value = '';
