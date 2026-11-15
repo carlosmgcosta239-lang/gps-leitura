@@ -47,13 +47,10 @@
   
   .welcome h2 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
   .welcome p { font-size: 13px; color: var(--text-light); margin-bottom: 16px; }
-  .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
   .stat-box { background: var(--card); border-radius: 12px; padding: 12px; border: 1px solid var(--border); }
-  .stat-box .val { font-size: 20px; font-weight: 800; }
+  .stat-box .val { font-size: 20px; font-weight: 800; color: var(--text); }
   .stat-box .lbl { font-size: 11px; color: var(--text-light); margin-top: 4px; }
-  .stat-box.total .val { color: var(--text); }
-  .stat-box.done .val { color: var(--green); }
-  .stat-box.pend .val { color: var(--red); }
   
   /* Novo Card de Tempo e Pontualidade */
   .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
@@ -71,6 +68,13 @@
   .alert-uc .text h4 { color: #991b1b; font-size: 14px; font-weight: 700; }
   .alert-uc .text p { color: #b91c1c; font-size: 12px; margin-top: 4px; }
   .alert-uc .qtd-badge { background: #dc2626; color: white; font-size: 24px; font-weight: 800; padding: 8px 16px; border-radius: 12px; }
+
+  /* Alerta GPS Detalhado */
+  .gps-list { max-height: 150px; overflow-y: auto; margin: 12px 0; background: #fff; border-radius: 8px; padding: 8px; border: 1px solid #fcd34d; }
+  .gps-item { font-size: 12px; padding: 6px 0; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+  .gps-item:last-child { border-bottom: none; }
+  .gps-item b { color: #92400e; }
+  .gps-item span { color: var(--text-light); font-size: 11px; }
 
   #map { height: 350px; border-radius: 12px; z-index: 1; margin-bottom: 12px; transition: filter 0.3s; }
   .dark-map .leaflet-layer { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
@@ -142,22 +146,19 @@
     <button class="btn-voice" id="btn-mic" onclick="toggleVoz()">🎤</button>
   </div>
 
+  <!-- Cards Superiores Simplificados -->
   <div class="stats-grid">
-    <div class="stat-box total">
+    <div class="stat-box">
       <div class="val" id="stat-total">0</div>
-      <div class="lbl">Leituras</div>
+      <div class="lbl">Total de Leituras</div>
     </div>
-    <div class="stat-box done">
-      <div class="val" id="stat-concluidas">0</div>
-      <div class="lbl">Concluídas</div>
-    </div>
-    <div class="stat-box pend">
-      <div class="val" id="stat-pendentes">0</div>
-      <div class="lbl">Pendentes</div>
+    <div class="stat-box">
+      <div class="val" id="stat-base-total">0</div>
+      <div class="lbl">Base Importada</div>
     </div>
   </div>
 
-  <!-- NOVOS CARDS DE TEMPO E PONTUALIDADE -->
+  <!-- Cards de Tempo e Pontualidade -->
   <div class="info-grid">
     <div class="info-card">
       <h3>Tempo Total</h3>
@@ -179,10 +180,17 @@
     </div>
   </div>
 
-  <!-- NOVO ALERTA DE GPS BASEADO NA COLUNA VALOR ZERO -->
+  <!-- ALERTA DE GPS MELHORADO -->
   <div class="card" id="alerta-gps" style="display: none; background: #fffbeb; border-color: #fcd34d;">
     <div class="card-title" style="color: #92400e;">⚠️ Alerta de GPS (Valor Zero)</div>
-    <p style="font-size: 13px; color: #92400e;">Existem <b id="qtd-gps-zero">0</b> instalações marcadas com "Valor Zero" na planilha. Peça aos colaboradores para ativarem o GPS!</p>
+    <p style="font-size: 13px; color: #92400e;">Existem <b id="qtd-gps-zero">0</b> instalações com falha no GPS. Verifique os detalhes abaixo:</p>
+    
+    <!-- Lista de detalhes -->
+    <div class="gps-list" id="gps-detalhes-lista"></div>
+    
+    <button class="btn btn-success" style="margin-top: 8px; margin-bottom: 0; padding: 10px; font-size: 13px;" onclick="exportarApenasGpsZero()">
+      ⬇️ Baixar Anexo (Só GPS Zero)
+    </button>
   </div>
 
   <div class="card">
@@ -402,12 +410,7 @@ function converterTempoParaSegundos(tempoStr) {
       let h = parseInt(partes[0]) || 0;
       const m = parseInt(partes[1]) || 0;
       const s = parseInt(partes[2]) || 0;
-      
-      // Corrige o erro da "hora do dia" do Excel
-      if (h > 0) {
-        h = 0;
-      }
-      
+      if (h > 0) { h = 0; }
       return (h * 3600) + (m * 60) + s;
     }
   } else if (tempoStr.includes('.')) {
@@ -447,17 +450,15 @@ function importarExcel(event) {
       const lat = parseFloat(latStr);
       const lng = parseFloat(lngStr);
       
-      // Verifica o GPS pelas coordenadas, mas prioriza o aviso se a coluna VALOR ZERO for 1
       let temGps = (lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng));
       const valorZeroFlag = parseInt(get(['valor zero'])) || 0;
       if (valorZeroFlag === 1) {
-        temGps = false; // Força a falha se a planilha disser que é zero
+        temGps = false;
       }
 
       let tempoStr = get(['tempo executado']);
       if (!tempoStr) tempoStr = get(['hora da leitura']);
       
-      // Lê a pontualidade da coluna V
       const pontualidade = get(['pontualidade']) || 'Não informado';
 
       return {
@@ -519,48 +520,62 @@ function filtrarDados() {
 
 function atualizarDashboard(termo = '') {
   const total = dadosFiltrados.length;
+  document.getElementById('stat-base-total').innerText = baseDados.length;
   
   let segundosTotais = 0;
   let dentroPrazo = 0;
   let foraPrazo = 0;
-  let gpsZerado = 0;
+  let gpsZeradoList = []; // Para listar os que estão com problema
 
   dadosFiltrados.forEach(r => {
-    // Soma Tempo
     segundosTotais += converterTempoParaSegundos(r.tempoStr);
 
-    // Conta Pontualidade
     if (r.pontualidade.toLowerCase().includes('dentro')) {
       dentroPrazo++;
     } else if (r.pontualidade.toLowerCase().includes('fora')) {
       foraPrazo++;
     }
 
-    // Conta GPS Zerado
     if (!r.temGps) {
-      gpsZerado++;
+      gpsZeradoList.push(r);
     }
   });
   
   const hTotal = Math.floor(segundosTotais / 3600).toString().padStart(2, '0');
   const mTotal = Math.floor((segundosTotais % 3600) / 60).toString().padStart(2, '0');
   const sTotal = (segundosTotais % 60).toString().padStart(2, '0');
+  
   document.getElementById('stat-tempo').innerText = `${hTotal}:${mTotal}:${sTotal}`;
   document.getElementById('stat-dentro-prazo').innerText = dentroPrazo;
   document.getElementById('stat-fora-prazo').innerText = foraPrazo;
+  document.getElementById('stat-total').innerText = total;
 
+  // Lógica do Alerta de GPS
+  if (gpsZeradoList.length > 0) {
+    document.getElementById('alerta-gps').style.display = 'block';
+    document.getElementById('qtd-gps-zero').innerText = gpsZeradoList.length;
+    
+    const listaHTML = gpsZeradoList.map(r => `
+      <div class="gps-item">
+        <div>
+          <b>UC: ${r.uc}</b><br>
+          <span>Livro: ${r.regional || '-'}</span><br>
+          <span>Colaborador: ${r.leiturista || '-'}</span>
+        </div>
+      </div>
+    `).join('');
+    document.getElementById('gps-detalhes-lista').innerHTML = listaHTML;
+  } else {
+    document.getElementById('alerta-gps').style.display = 'none';
+  }
+
+  // Contagem de Status
   const contagemStatus = {};
   const statusBase = [
-    'LEITURA NORMAL', 
-    'CASA DEMOLIDA/INCENDIO', 
-    'LEITURA CONFIRMADA SEM INSPEÇÃO', 
-    'LEITURA CONFIRMADA COM TROCA DE MEDIDOR', 
-    'SEM LEITURA. NECESSÁRIA INSPEÇÃO TÉCNICA', 
-    'UC SEM MEDIDOR', 
-    'IMPEDIMENTO DE ACESSO DO CLIENTE',
-    'UC NAO LOCALIZADA'
+    'LEITURA NORMAL', 'CASA DEMOLIDA/INCENDIO', 'LEITURA CONFIRMADA SEM INSPEÇÃO', 
+    'LEITURA CONFIRMADA COM TROCA DE MEDIDOR', 'SEM LEITURA. NECESSÁRIA INSPEÇÃO TÉCNICA', 
+    'UC SEM MEDIDOR', 'IMPEDIMENTO DE ACESSO DO CLIENTE', 'UC NAO LOCALIZADA'
   ];
-  
   statusBase.forEach(s => contagemStatus[s] = 0);
 
   dadosFiltrados.forEach(r => {
@@ -574,11 +589,8 @@ function atualizarDashboard(termo = '') {
     else if (st.includes('IMPEDIMENTO') || st.includes('ACESSO DO CLIENTE')) st = 'IMPEDIMENTO DE ACESSO DO CLIENTE';
     else if (st.includes('NAO LOCALIZADA') || st.includes('NÃO LOCALIZADA')) st = 'UC NAO LOCALIZADA';
     
-    if (contagemStatus[st] !== undefined) {
-      contagemStatus[st]++;
-    } else {
-      contagemStatus[st] = (contagemStatus[st] || 0) + 1;
-    }
+    if (contagemStatus[st] !== undefined) contagemStatus[st]++;
+    else contagemStatus[st] = (contagemStatus[st] || 0) + 1;
   });
 
   const ul = document.getElementById('lista-status');
@@ -591,26 +603,10 @@ function atualizarDashboard(termo = '') {
     }
   });
 
-  const concluidas = dadosFiltrados.filter(r => r.status && !r.status.includes('Pendente') && r.status !== '000' && r.status !== '').length;
-  const pendentes = total - concluidas;
-
-  document.getElementById('stat-total').innerText = total;
-  document.getElementById('stat-concluidas').innerText = concluidas;
-  document.getElementById('stat-pendentes').innerText = pendentes;
-  document.getElementById('base-registros').innerText = `${baseDados.length} registros na base`;
-  
   if (termo) {
     document.getElementById('filtro-atual').innerText = `Filtrando por: "${termo}" (${total} resultados)`;
   } else {
     document.getElementById('filtro-atual').innerText = baseDados.length > 0 ? `Operação - ${baseDados[0]?.regional || 'Geral'}` : 'Nenhuma base carregada';
-  }
-
-  // Alerta de GPS
-  if (gpsZerado > 0) {
-    document.getElementById('alerta-gps').style.display = 'block';
-    document.getElementById('qtd-gps-zero').innerText = gpsZerado;
-  } else {
-    document.getElementById('alerta-gps').style.display = 'none';
   }
 
   const qtdNaoLocalizada = contagemStatus['UC NAO LOCALIZADA'] || 0;
@@ -780,6 +776,17 @@ function salvarOcorrencia() {
   document.getElementById('ocorrencia-obs').value = '';
   
   alert('✅ Ocorrência registrada com sucesso! Ela será incluída no arquivo Excel ao baixar a base.');
+}
+
+// NOVA FUNÇÃO: Exportar apenas as ocorrências de GPS Zero
+function exportarApenasGpsZero() {
+  const gpsZeradoList = dadosFiltrados.filter(r => !r.temGps);
+  if (gpsZeradoList.length === 0) return alert('Não há falhas de GPS na seleção atual.');
+  
+  const ws = XLSX.utils.json_to_sheet(gpsZeradoList);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "GPS Zero");
+  XLSX.writeFile(wb, "Anexo_GPS_Zero.xlsx");
 }
 
 function exportarExcelBase() {
